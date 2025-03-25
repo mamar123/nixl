@@ -13,6 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-subdir('nixl')
-subdir('unit')
-subdir('gtest')
+gtest_dep = dependency('gtest', version : '>=1.11.0', required : false)
+
+if not gtest_dep.found()
+    message('GTest not found, skipping gtest build')
+    subdir_done()
+endif
+
+if cuda_dep.found()
+    cuda_dependencies = [cuda_dep]
+else
+    cuda_dependencies = []
+endif
+
+test_exe = executable('gtest',
+    sources : ['main.cpp'],
+    dependencies : [nixl_dep, cuda_dep, gtest_dep]
+)
+
+test('gtest', test_exe)
