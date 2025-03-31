@@ -26,9 +26,12 @@ else
     cuda_dependencies = []
 endif
 
+plugin_dirs_arg = '--tests_plugin_dirs=' + plugin_dirs
+
 test_exe = executable('gtest',
     sources : ['main.cpp'],
+    include_directories: [nixl_inc_dirs, utils_inc_dirs],
     dependencies : [nixl_dep, cuda_dep, gtest_dep]
 )
 
-test('gtest', test_exe)
+test('gtest', test_exe, args: [plugin_dirs_arg])
