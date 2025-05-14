@@ -29,6 +29,8 @@ if not gmock_dep.found()
     subdir_done()
 endif
 
+gtest_inc_dirs = include_directories('.')
+
 subdir('mocks')
 subdir('unit')
 
@@ -50,8 +52,17 @@ endif
 # for loading plugins from build directory
 cpp_flags += '-DBUILD_DIR="' + meson.project_build_root() + '"'
 
+gtest_sources = [
+    'main.cpp',
+    'mocks/gmock_engine.cpp',
+    'plugin_manager.cpp',
+    'error_handling.cpp',
+    'test_transfer.cpp',
+    'metadata_exchange.cpp',
+    'common.cpp'
+    ]
 test_exe = executable('gtest',
-    sources : ['main.cpp', 'plugin_manager.cpp', 'error_handling.cpp', 'test_transfer.cpp', 'metadata_exchange.cpp', 'common.cpp'],
+    sources : gtest_sources,
     include_directories: [nixl_inc_dirs, utils_inc_dirs],
     cpp_args : cpp_flags,
     dependencies : [nixl_dep, cuda_dep, gtest_dep, gmock_dep, absl_strings_dep, absl_time_dep],
