@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include "nixl.h"
 #include "plugin_manager.h"
+#include "common.h"
 #include <thread>
 #include <filesystem>
 
@@ -45,7 +46,7 @@ protected:
     nixlBackendH* verifyMockDramBackendCreation(nixlAgent& agent) {
         nixlBackendH* backend_handle = nullptr;
         nixl_b_params_t params;
-        auto status = agent.createBackend("MOCK_DRAM", params, backend_handle);
+        auto status = agent.createBackend(mock_dram_plugin_name, params, backend_handle);
         EXPECT_EQ(status, NIXL_SUCCESS);
         EXPECT_NE(backend_handle, nullptr);
         return backend_handle;

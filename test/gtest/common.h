@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef TEST_GTEST_COMMON_H
+#define TEST_GTEST_COMMON_H
 
 #include <iostream>
 #include <iomanip>
@@ -22,6 +24,8 @@
 #include <optional>
 
 namespace gtest {
+static constexpr const char *mock_basic_plugin_name = "MOCK_BASIC";
+static constexpr const char *mock_dram_plugin_name = "MOCK_DRAM";
 
 class Logger {
 public:
@@ -58,3 +62,5 @@ private:
 };
 
 } // namespace gtest
+
+#endif /* TEST_GTEST_COMMON_H */
