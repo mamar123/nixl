@@ -24,8 +24,10 @@
 #include <optional>
 
 namespace gtest {
-static constexpr const char *mock_basic_plugin_name = "MOCK_BASIC";
-static constexpr const char *mock_dram_plugin_name = "MOCK_DRAM";
+constexpr const char *
+GetMockBackendName() {
+    return "MOCK_BACKEND";
+}
 
 class Logger {
 public:
