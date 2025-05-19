@@ -16,7 +16,7 @@
 gtest_base_dir = '..'
 gtest_inc_dirs = include_directories(gtest_base_dir)
 
-mock_backend_sources = ['gmock_engine.cpp', 'mock_dram_plugin.cpp', 'mock_dram_engine.cpp', join_paths(gtest_base_dir, 'common.cpp')]
+mock_backend_sources = ['gmock_engine.cpp', 'mock_backend_plugin.cpp', 'mock_backend_engine.cpp', join_paths(gtest_base_dir, 'common.cpp')]
 mock_backend_plugin = shared_library('MOCK_BACKEND', mock_backend_sources,
                dependencies: [nixl_infra, gmock_dep],
                include_directories: [nixl_inc_dirs, utils_inc_dirs, gtest_inc_dirs],
