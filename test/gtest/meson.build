@@ -49,7 +49,7 @@ endif
 cpp_flags += '-DBUILD_DIR="' + meson.project_build_root() + '"'
 
 test_exe = executable('gtest',
-    sources : ['main.cpp', 'plugin_manager.cpp', 'ucx_tests.cpp', 'test_transfer.cpp'],
+    sources : ['main.cpp', 'common.cpp', 'plugin_manager.cpp', 'ucx_tests.cpp', 'test_transfer.cpp'],
     include_directories: [nixl_inc_dirs, utils_inc_dirs],
     cpp_args : cpp_flags,
     dependencies : [nixl_dep, cuda_dep, gtest_dep, gmock_dep, absl_strings_dep, absl_time_dep],
@@ -65,7 +65,7 @@ if get_option('b_sanitize').split(',').contains('thread')
     test_env.set('NIXL_PLUGIN_DIR', mocks_dep.get_variable('path'))
 
     mt_test_exe = executable('mt_test',
-        sources : ['main.cpp', 'mocks/gmock_engine.cpp', 'multi_threading.cpp'],
+        sources : ['main.cpp', 'common.cpp', 'mocks/gmock_engine.cpp', 'multi_threading.cpp'],
         include_directories: [nixl_inc_dirs, utils_inc_dirs],
         cpp_args : cpp_flags,
         dependencies : [nixl_dep, nixl_infra, cuda_dep, gtest_dep, gmock_dep],
