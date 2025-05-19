@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "mock_dram_engine.h"
+#include "mock_backend_engine.h"
 #include "common.h"
 
 namespace mocks {
@@ -55,8 +55,10 @@ namespace backend_plugin {
 
 } // namespace mocks
 
-extern "C" nixlBackendPlugin *nixl_plugin_init() {
+extern "C" nixlBackendPlugin *
+nixl_plugin_init() {
     return &mocks::backend_plugin::plugin;
 }
 
-extern "C" void nixl_plugin_fini() {}
+extern "C" void
+nixl_plugin_fini() {}
