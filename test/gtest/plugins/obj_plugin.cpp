@@ -21,8 +21,7 @@
 #include "transfer_handler.h"
 #include "obj/obj_backend.h"
 
-namespace gtest {
-namespace obj_plugin {
+namespace gtest::obj_plugin {
 
     nixl_b_params_t obj_params{
         {"bucket", "nixl-ci-test"},
@@ -63,5 +62,4 @@ namespace obj_plugin {
 
     INSTANTIATE_TEST_SUITE_P(ObjTests, SetupObjTestFixture, testing::Values(obj_test_params));
 
-} // namespace obj_plugin
-} // namespace gtest
+} // namespace gtest::obj_plugin
