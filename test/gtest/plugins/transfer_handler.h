@@ -20,14 +20,15 @@
 #include "backend_engine.h"
 #include "memory_handler.h"
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
-class transferHandler {
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType> class transferHandler {
 public:
-    transferHandler(std::unique_ptr<nixlBackendEngine> &local_engine, std::unique_ptr<nixlBackendEngine> &xfer_engine,
-        bool split_buf = true, int num_bufs = 1);
+    transferHandler(std::unique_ptr<nixlBackendEngine> &local_engine,
+                    std::unique_ptr<nixlBackendEngine> &xfer_engine,
+                    bool split_buf = true,
+                    int num_bufs = 1);
 
     ~transferHandler();
-    
+
     void
     testTransfer(nixl_xfer_op_t op);
 

@@ -21,10 +21,13 @@
 #include "common/nixl_log.h"
 #include "transfer_handler.h"
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 transferHandler<localMemType, xferMemType>::transferHandler(
-    std::unique_ptr<nixlBackendEngine> &local_engine, std::unique_ptr<nixlBackendEngine> &xfer_engine,
-    bool split_buf, int num_bufs) : num_bufs_(num_bufs) {
+    std::unique_ptr<nixlBackendEngine> &local_engine,
+    std::unique_ptr<nixlBackendEngine> &xfer_engine,
+    bool split_buf,
+    int num_bufs)
+    : num_bufs_(num_bufs) {
 
     CHECK(num_bufs_ <= (int)MAX_NUM_BUFS) << "Number of buffers exceeds maximum number of buffers";
     local_backend_engine_ = local_engine.get();
@@ -43,55 +46,54 @@ transferHandler<localMemType, xferMemType>::transferHandler(
         xferAgent_ = localAgent_;
         xferDevId_ = localDevId_;
     }
-    
+
     for (int i = 0; i < num_bufs_; i++) {
         localMem_[i] = std::make_unique<memoryHandler<localMemType>>(BUF_SIZE, localDevId_ + i);
         xferMem_[i] = std::make_unique<memoryHandler<xferMemType>>(BUF_SIZE, xferDevId_ + i);
     }
 
-    if (xfer_backend_engine_->supportsNotif())
-        setupNotifs("Test");
+    if (xfer_backend_engine_->supportsNotif()) setupNotifs("Test");
 
     EXPECT_EQ(registerMems(), NIXL_SUCCESS);
     EXPECT_EQ(prepMems(split_buf, remote_xfer), NIXL_SUCCESS);
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 transferHandler<localMemType, xferMemType>::~transferHandler() {
     EXPECT_EQ(local_backend_engine_->unloadMD(xferLoadedMD_), NIXL_SUCCESS);
     EXPECT_EQ(local_backend_engine_->disconnect(xferAgent_), NIXL_SUCCESS);
     EXPECT_EQ(deregisterMems(), NIXL_SUCCESS);
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 void
 transferHandler<localMemType, xferMemType>::testTransfer(nixl_xfer_op_t op) {
     EXPECT_EQ(performTransfer(op), NIXL_SUCCESS);
     EXPECT_EQ(verifyTransfer(op), NIXL_SUCCESS);
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 void
 transferHandler<localMemType, xferMemType>::setLocalMem() {
     for (int i = 0; i < num_bufs_; i++)
         localMem_[i]->set(LOCAL_BUF_BYTE + i);
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 void
 transferHandler<localMemType, xferMemType>::resetLocalMem() {
     for (int i = 0; i < num_bufs_; i++)
         localMem_[i]->reset();
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 void
 transferHandler<localMemType, xferMemType>::checkLocalMem() {
     for (int i = 0; i < num_bufs_; i++)
         EXPECT_TRUE(localMem_[i]->check(LOCAL_BUF_BYTE + i));
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 nixl_status_t
 transferHandler<localMemType, xferMemType>::registerMems() {
     nixlBlobDesc local_desc;
@@ -119,7 +121,7 @@ transferHandler<localMemType, xferMemType>::registerMems() {
     return NIXL_SUCCESS;
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 nixl_status_t
 transferHandler<localMemType, xferMemType>::deregisterMems() {
     nixl_status_t ret;
@@ -138,7 +140,7 @@ transferHandler<localMemType, xferMemType>::deregisterMems() {
     return NIXL_SUCCESS;
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 nixl_status_t
 transferHandler<localMemType, xferMemType>::prepMems(bool split_buf, bool remote_xfer) {
     nixl_status_t ret;
@@ -183,7 +185,7 @@ transferHandler<localMemType, xferMemType>::prepMems(bool split_buf, bool remote
     return NIXL_SUCCESS;
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 nixl_status_t
 transferHandler<localMemType, xferMemType>::performTransfer(nixl_xfer_op_t op) {
     nixlBackendReqH *handle_;
@@ -230,7 +232,7 @@ transferHandler<localMemType, xferMemType>::performTransfer(nixl_xfer_op_t op) {
     return NIXL_SUCCESS;
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 nixl_status_t
 transferHandler<localMemType, xferMemType>::verifyTransfer(nixl_xfer_op_t op) {
     if (local_backend_engine_->supportsNotif()) {
@@ -246,7 +248,7 @@ transferHandler<localMemType, xferMemType>::verifyTransfer(nixl_xfer_op_t op) {
     return NIXL_SUCCESS;
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 nixl_status_t
 transferHandler<localMemType, xferMemType>::verifyNotifs(std::string &msg) {
     notif_list_t target_notifs;
@@ -278,30 +280,30 @@ transferHandler<localMemType, xferMemType>::verifyNotifs(std::string &msg) {
 
     if (target_notifs.front().first != localAgent_) {
         NIXL_ERROR << "Expected notification from " << localAgent_ << ", got "
-                << target_notifs.front().first;
+                   << target_notifs.front().first;
         return NIXL_ERR_BACKEND;
     }
     if (target_notifs.front().second != msg) {
         NIXL_ERROR << "Expected notification message " << msg << ", got "
-                << target_notifs.front().second;
+                   << target_notifs.front().second;
         return NIXL_ERR_BACKEND;
     }
 
     NIXL_INFO << "OK\n"
-            << "message: " << target_notifs.front().second << " from "
-            << target_notifs.front().first;
+              << "message: " << target_notifs.front().second << " from "
+              << target_notifs.front().first;
 
     return NIXL_SUCCESS;
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 void
 transferHandler<localMemType, xferMemType>::setupNotifs(std::string msg) {
     optionalXferArgs_.notifMsg = msg;
     optionalXferArgs_.hasNotif = true;
 }
 
-template <nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
 nixl_status_t
 transferHandler<localMemType, xferMemType>::verifyConnInfo() {
     std::string conn_info;
@@ -329,9 +331,17 @@ transferHandler<localMemType, xferMemType>::verifyConnInfo() {
 }
 
 // Specialize for transferHandler<DRAM_SEG, OBJ_SEG>
-template transferHandler<DRAM_SEG, OBJ_SEG>::transferHandler(std::unique_ptr<nixlBackendEngine> &local_engine, std::unique_ptr<nixlBackendEngine> &xfer_engine, bool split_buf, int num_bufs);
+template transferHandler<DRAM_SEG, OBJ_SEG>::transferHandler(
+    std::unique_ptr<nixlBackendEngine> &local_engine,
+    std::unique_ptr<nixlBackendEngine> &xfer_engine,
+    bool split_buf,
+    int num_bufs);
 template transferHandler<DRAM_SEG, OBJ_SEG>::~transferHandler();
-template void transferHandler<DRAM_SEG, OBJ_SEG>::setLocalMem();
-template void transferHandler<DRAM_SEG, OBJ_SEG>::resetLocalMem();
-template void transferHandler<DRAM_SEG, OBJ_SEG>::checkLocalMem();
-template void transferHandler<DRAM_SEG, OBJ_SEG>::testTransfer(nixl_xfer_op_t op);
+template void
+transferHandler<DRAM_SEG, OBJ_SEG>::setLocalMem();
+template void
+transferHandler<DRAM_SEG, OBJ_SEG>::resetLocalMem();
+template void
+transferHandler<DRAM_SEG, OBJ_SEG>::checkLocalMem();
+template void
+transferHandler<DRAM_SEG, OBJ_SEG>::testTransfer(nixl_xfer_op_t op);

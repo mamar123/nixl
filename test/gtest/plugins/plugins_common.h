@@ -34,7 +34,8 @@ protected:
     SetUp() {
         CHECK(!local_backend_engine_->getInitErr()) << "Failed to initialize backend engine";
         if (remote_backend_engine_)
-            CHECK(!remote_backend_engine_->getInitErr()) << "Failed to initialize remote backend engine";
+            CHECK(!remote_backend_engine_->getInitErr())
+                << "Failed to initialize remote backend engine";
     }
 };
 

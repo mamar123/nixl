@@ -19,44 +19,44 @@
 #include "memory_handler.h"
 
 // DRAM_SEG specific functions
-template <>
-memoryHandler<DRAM_SEG>::memoryHandler(size_t len, int devId) : len_(len), devId_(devId) {
-        addr_ = malloc(len);
+template<>
+memoryHandler<DRAM_SEG>::memoryHandler(size_t len, int devId) : len_(len),
+                                                                devId_(devId) {
+    addr_ = malloc(len);
 }
 
-template <>
-memoryHandler<DRAM_SEG>::~memoryHandler() {
+template<> memoryHandler<DRAM_SEG>::~memoryHandler() {
     free(addr_);
 }
 
-template <>
+template<>
 void
 memoryHandler<DRAM_SEG>::set(char byte) {
     for (size_t i = 0; i < len_; i++)
         ((char *)addr_)[i] = byte + i;
 }
 
-template <>
+template<>
 bool
 memoryHandler<DRAM_SEG>::check(char byte) {
     for (size_t i = 0; i < len_; i++) {
         uint8_t expected_byte = (uint8_t)byte + i;
         if (((char *)addr_)[i] != expected_byte) {
-            NIXL_ERROR << "Verification failed at index " << i
-                        << "! local: " << ((char *)addr_)[i] << ", expected: " << expected_byte;
+            NIXL_ERROR << "Verification failed at index " << i << "! local: " << ((char *)addr_)[i]
+                       << ", expected: " << expected_byte;
             return false;
         }
     }
     return true;
 }
 
-template <>
+template<>
 void
 memoryHandler<DRAM_SEG>::reset() {
     memset(addr_, 0x00, len_);
 }
 
-template <>
+template<>
 void
 memoryHandler<DRAM_SEG>::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
     desc->addr = reinterpret_cast<uintptr_t>(addr_);
@@ -64,7 +64,7 @@ memoryHandler<DRAM_SEG>::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
     desc->devId = devId_;
 }
 
-template <>
+template<>
 void
 memoryHandler<DRAM_SEG>::populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
     desc->addr = reinterpret_cast<uintptr_t>(addr_) + entry_index * entry_size;
@@ -74,32 +74,32 @@ memoryHandler<DRAM_SEG>::populateMetaDesc(nixlMetaDesc *desc, int entry_index, s
 }
 
 // OBJ_SEG specific functions
-template <>
-memoryHandler<OBJ_SEG>::memoryHandler(size_t len, int devId) : len_(len), devId_(devId) {}
+template<>
+memoryHandler<OBJ_SEG>::memoryHandler(size_t len, int devId) : len_(len),
+                                                               devId_(devId) {}
 
-template <>
-memoryHandler<OBJ_SEG>::~memoryHandler() {}
+template<> memoryHandler<OBJ_SEG>::~memoryHandler() {}
 
-template <>
+template<>
 void
 memoryHandler<OBJ_SEG>::set(char byte) {
     CHECK(false) << "set() is not supported for OBJ_SEG type";
 }
 
-template <>
+template<>
 bool
 memoryHandler<OBJ_SEG>::check(char byte) {
     CHECK(false) << "check() is not supported for OBJ_SEG type";
     return false;
 }
 
-template <>
+template<>
 void
 memoryHandler<OBJ_SEG>::reset() {
     CHECK(false) << "reset() is not supported for OBJ_SEG type";
 }
 
-template <>
+template<>
 void
 memoryHandler<OBJ_SEG>::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
     desc->addr = 0;
@@ -108,11 +108,11 @@ memoryHandler<OBJ_SEG>::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
     desc->metaInfo = absl::StrFormat("test-obj-key-%d", buf_index);
 }
 
-template <>
+template<>
 void
 memoryHandler<OBJ_SEG>::populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
     desc->addr = 0;
     desc->len = len_;
     desc->devId = devId_;
     desc->metadataP = md_;
-} 
+}

@@ -26,8 +26,7 @@
 //############################           Memory Handler           ##################################
 //##################################################################################################
 
-template <nixl_mem_t memType>
-class memoryHandler {
+template<nixl_mem_t memType> class memoryHandler {
 public:
     memoryHandler(size_t len, int devId) {
         CHECK(false) << "memoryHandler() is not implemented for <" << memType << "> memory type";
