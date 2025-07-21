@@ -18,13 +18,13 @@
 #include <gtest/gtest.h>
 
 #include "plugins_common.h"
+#include "transfer_handler.h"
 #include "obj/obj_backend.h"
 
 namespace gtest {
 namespace obj_plugin {
 
     nixl_b_params_t obj_params{
-        {"region", "eu-central-1"},
         {"bucket", "nixl-ci-test"},
     };
 
@@ -39,32 +39,26 @@ namespace obj_plugin {
     class SetupObjTestFixture : public plugins_common::SetupBackendTestFixture {
     protected:
         SetupObjTestFixture() {
-            backend_engine_ = std::make_unique<nixlObjEngine>(&GetParam());
+            local_backend_engine_ = std::make_unique<nixlObjEngine>(&GetParam());
         }
     };
 
-    TEST_P(SetupObjTestFixture, SimpleLifeCycleTest) {
-        EXPECT_TRUE(isLoaded());
-    }
-
     TEST_P(SetupObjTestFixture, XferTest) {
-        EXPECT_TRUE(isLoaded());
-        EXPECT_TRUE((setupLocalXfer(DRAM_SEG, OBJ_SEG, false)));
-        EXPECT_TRUE(testLocalXfer(NIXL_WRITE));
-        resetLocalBuf();
-        EXPECT_TRUE(testLocalXfer(NIXL_READ));
-        EXPECT_TRUE(checkLocalBuf());
-        EXPECT_TRUE(teardownXfer());
+        transferHandler<DRAM_SEG, OBJ_SEG> transfer(local_backend_engine_, local_backend_engine_, false, 1);
+        transfer.setLocalMem();
+        transfer.testTransfer(NIXL_WRITE);
+        transfer.resetLocalMem();
+        transfer.testTransfer(NIXL_READ);
+        transfer.checkLocalMem();
     }
 
-    TEST_P(SetupObjTestFixture, XferMultiBufTest) {
-        EXPECT_TRUE(isLoaded());
-        EXPECT_TRUE((setupLocalXfer(DRAM_SEG, OBJ_SEG, false, 3)));
-        EXPECT_TRUE(testLocalXfer(NIXL_WRITE));
-        resetLocalBuf();
-        EXPECT_TRUE(testLocalXfer(NIXL_READ));
-        EXPECT_TRUE(checkLocalBuf());
-        EXPECT_TRUE(teardownXfer());
+    TEST_P(SetupObjTestFixture, XferMultiBufsTest) {
+        transferHandler<DRAM_SEG, OBJ_SEG> transfer(local_backend_engine_, local_backend_engine_, false, 3);
+        transfer.setLocalMem();
+        transfer.testTransfer(NIXL_WRITE);
+        transfer.resetLocalMem();
+        transfer.testTransfer(NIXL_READ);
+        transfer.checkLocalMem();
     }
 
     INSTANTIATE_TEST_SUITE_P(ObjTests, SetupObjTestFixture, testing::Values(obj_test_params));

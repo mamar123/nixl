@@ -15,125 +15,104 @@
  * limitations under the License.
  */
 
-#include "absl/log/check.h"
-#include "common/nixl_log.h"
-#include "backend/backend_aux.h"
+#include <absl/strings/str_format.h>
 #include "memory_handler.h"
 
-void
-MemoryHandler::allocate(size_t len) {
-    switch (memType_) {
-    case DRAM_SEG:
-        addr_ = new char[len];
-        break;
-    case OBJ_SEG:
-        addr_ = nullptr;
-        break;
-    default:
-        CHECK(false) << "Unsupported memory type!";
-        break;
-    }
-    len_ = len;
+// DRAM_SEG specific functions
+template <>
+memoryHandler<DRAM_SEG>::memoryHandler(size_t len, int devId) : len_(len), devId_(devId) {
+        addr_ = malloc(len);
 }
 
-void
-MemoryHandler::deallocate() {
-    switch (memType_) {
-    case DRAM_SEG:
-        delete[] static_cast<char *>(addr_);
-        break;
-    case OBJ_SEG:
-        break;
-    default:
-        CHECK(false) << "Unsupported memory type!";
-        break;
-    }
+template <>
+memoryHandler<DRAM_SEG>::~memoryHandler() {
+    free(addr_);
 }
 
+template <>
 void
-MemoryHandler::set(char byte) {
-    switch (memType_) {
-    case DRAM_SEG:
-        for (size_t i = 0; i < len_; i++)
-            ((char *)addr_)[i] = byte + i;
-        break;
-    case OBJ_SEG:
-        break;
-    default:
-        CHECK(false) << "Unsupported memory type!";
-        break;
-    }
+memoryHandler<DRAM_SEG>::set(char byte) {
+    for (size_t i = 0; i < len_; i++)
+        ((char *)addr_)[i] = byte + i;
 }
 
+template <>
 bool
-MemoryHandler::check(char byte) {
-    switch (memType_) {
-    case DRAM_SEG:
-        for (size_t i = 0; i < len_; i++) {
-            uint8_t expected_byte = (uint8_t)byte + i;
-            if (((char *)addr_)[i] != expected_byte) {
-                NIXL_ERROR << "Verification failed at index " << i
-                           << "! local: " << ((char *)addr_)[i] << ", expected: " << expected_byte;
-                return false;
-            }
+memoryHandler<DRAM_SEG>::check(char byte) {
+    for (size_t i = 0; i < len_; i++) {
+        uint8_t expected_byte = (uint8_t)byte + i;
+        if (((char *)addr_)[i] != expected_byte) {
+            NIXL_ERROR << "Verification failed at index " << i
+                        << "! local: " << ((char *)addr_)[i] << ", expected: " << expected_byte;
+            return false;
         }
-        break;
-    case OBJ_SEG:
-        break;
-    default:
-        CHECK(false) << "Unsupported memory type!";
-        break;
     }
     return true;
 }
 
+template <>
 void
-MemoryHandler::reset() {
-    switch (memType_) {
-    case DRAM_SEG:
-        memset(addr_, 0x00, len_);
-        break;
-    case OBJ_SEG:
-        break;
-    default:
-        CHECK(false) << "Unsupported memory type!";
-        break;
-    }
+memoryHandler<DRAM_SEG>::reset() {
+    memset(addr_, 0x00, len_);
 }
 
+template <>
 void
-MemoryHandler::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
-    switch (memType_) {
-    case DRAM_SEG:
-        desc->addr = reinterpret_cast<uintptr_t>(addr_);
-        break;
-    case OBJ_SEG:
-        desc->addr = 0;
-        desc->metaInfo = "test-obj-key-" + std::to_string(buf_index);
-        break;
-    default:
-        CHECK(false) << "Unsupported memory type!";
-        break;
-    }
+memoryHandler<DRAM_SEG>::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
+    desc->addr = reinterpret_cast<uintptr_t>(addr_);
     desc->len = len_;
     desc->devId = devId_;
 }
 
+template <>
 void
-MemoryHandler::populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
-    switch (memType_) {
-    case DRAM_SEG:
-        desc->addr = reinterpret_cast<uintptr_t>(addr_) + entry_index * entry_size;
-        desc->len = entry_size;
-        break;
-    case OBJ_SEG:
-        desc->addr = 0;
-        desc->len = len_;
-        break;
-    default:
-        CHECK(false) << "Unsupported memory type!";
-        break;
-    }
+memoryHandler<DRAM_SEG>::populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
+    desc->addr = reinterpret_cast<uintptr_t>(addr_) + entry_index * entry_size;
+    desc->len = entry_size;
     desc->devId = devId_;
     desc->metadataP = md_;
 }
+
+// OBJ_SEG specific functions
+template <>
+memoryHandler<OBJ_SEG>::memoryHandler(size_t len, int devId) : len_(len), devId_(devId) {}
+
+template <>
+memoryHandler<OBJ_SEG>::~memoryHandler() {}
+
+template <>
+void
+memoryHandler<OBJ_SEG>::set(char byte) {
+    CHECK(false) << "set() is not supported for OBJ_SEG type";
+}
+
+template <>
+bool
+memoryHandler<OBJ_SEG>::check(char byte) {
+    CHECK(false) << "check() is not supported for OBJ_SEG type";
+    return false;
+}
+
+template <>
+void
+memoryHandler<OBJ_SEG>::reset() {
+    CHECK(false) << "reset() is not supported for OBJ_SEG type";
+}
+
+template <>
+void
+memoryHandler<OBJ_SEG>::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
+    desc->addr = 0;
+    desc->len = len_;
+    desc->devId = devId_;
+    desc->metaInfo = absl::StrFormat("test-obj-key-%d", buf_index);
+}
+
+template <>
+void
+memoryHandler<OBJ_SEG>::populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
+    desc->addr = 0;
+    desc->len = len_;
+    desc->devId = devId_;
+    desc->metadataP = md_;
+} 

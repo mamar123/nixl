@@ -18,40 +18,49 @@
 #define __MEMORY_HANDLER_H
 
 #include "backend/backend_aux.h"
+#include "backend_engine.h"
+#include "common/nixl_log.h"
+#include "nixl.h"
 
-class MemoryHandler {
+//##################################################################################################
+//############################           Memory Handler           ##################################
+//##################################################################################################
+
+template <nixl_mem_t memType>
+class memoryHandler {
 public:
-    MemoryHandler(nixl_mem_t memType, int devId) : memType_(memType), devId_(devId) {}
+    memoryHandler(size_t len, int devId) {
+        CHECK(false) << "memoryHandler() is not implemented for <" << memType << "> memory type";
+    }
 
-    void
-    allocate(size_t len);
-
-    void
-    deallocate();
-
-    void
-    set(char byte);
-
-    bool
-    check(char byte);
-
-    void
-    reset();
-
-    void
-    populateBlobDesc(nixlBlobDesc *desc, int buf_index = 0);
-
-    void
-    populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size);
-
-    nixl_mem_t
-    getMemType() {
-        return memType_;
+    ~memoryHandler() {
+        CHECK(false) << "~memoryHandler() is not implemented for <" << memType << "> memory type";
     }
 
     void
-    setMD(nixlBackendMD *md) {
-        md_ = md;
+    set(char byte) {
+        CHECK(false) << "set() is not implemented for <" << memType << "> memory type";
+    }
+
+    bool
+    check(char byte) {
+        CHECK(false) << "check() is not implemented for <" << memType << "> memory type";
+        return false;
+    }
+
+    void
+    reset() {
+        CHECK(false) << "reset() is not implemented for <" << memType << "> memory type";
+    }
+
+    void
+    populateBlobDesc(nixlBlobDesc *desc, int buf_index = 0) {
+        CHECK(false) << "populateBlobDesc() is not implemented for <" << memType << "> memory type";
+    }
+
+    void
+    populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
+        CHECK(false) << "populateMetaDesc() is not implemented for <" << memType << "> memory type";
     }
 
     nixlBackendMD *
@@ -59,13 +68,12 @@ public:
         return md_;
     }
 
-    int
-    getDevId() {
-        return devId_;
+    void
+    setMD(nixlBackendMD *md) {
+        md_ = md;
     }
 
 private:
-    nixl_mem_t memType_;
     void *addr_;
     size_t len_;
     int devId_;
