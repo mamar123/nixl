@@ -48,20 +48,20 @@ private:
     static constexpr size_t ENTRY_SIZE = 16;
     static constexpr size_t BUF_SIZE = NUM_ENTRIES * ENTRY_SIZE;
     static constexpr size_t MAX_NUM_BUFS = 3;
-    static constexpr std::string_view localAgent_ = "Agent1";
-    static constexpr std::string_view remoteAgent_ = "Agent2";
+    static constexpr std::string_view local_agent_ = "Agent1";
+    static constexpr std::string_view remote_agent_ = "Agent2";
 
-    std::unique_ptr<memoryHandler<localMemType>> localMem_[MAX_NUM_BUFS];
-    std::unique_ptr<memoryHandler<xferMemType>> xferMem_[MAX_NUM_BUFS];
-    std::unique_ptr<nixl_meta_dlist_t> reqSrcDescs_;
-    std::unique_ptr<nixl_meta_dlist_t> reqDstDescs_;
+    std::unique_ptr<memoryHandler<localMemType>> local_mem_[MAX_NUM_BUFS];
+    std::unique_ptr<memoryHandler<xferMemType>> xfer_mem_[MAX_NUM_BUFS];
+    std::unique_ptr<nixl_meta_dlist_t> src_descs_;
+    std::unique_ptr<nixl_meta_dlist_t> dst_descs_;
     nixlBackendEngine *local_backend_engine_;
     nixlBackendEngine *xfer_backend_engine_;
-    nixl_opt_b_args_t optionalXferArgs_;
-    nixlBackendMD *xferLoadedMD_;
-    std::string xferAgent_;
-    int localDevId_;
-    int xferDevId_;
+    nixl_opt_b_args_t xfer_opt_args_;
+    nixlBackendMD *xfer_loaded_md_;
+    std::string xfer_agent_;
+    int local_dev_id_;
+    int xfer_dev_id_;
     int num_bufs_;
 
     nixl_status_t

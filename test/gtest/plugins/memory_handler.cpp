@@ -20,8 +20,8 @@
 
 // DRAM_SEG specific functions
 template<>
-memoryHandler<DRAM_SEG>::memoryHandler(size_t len, int devId) : len_(len),
-                                                                devId_(devId) {
+memoryHandler<DRAM_SEG>::memoryHandler(size_t len, int dev_id) : len_(len),
+                                                                 dev_id_(dev_id) {
     addr_ = malloc(len);
 }
 
@@ -61,7 +61,7 @@ void
 memoryHandler<DRAM_SEG>::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
     desc->addr = reinterpret_cast<uintptr_t>(addr_);
     desc->len = len_;
-    desc->devId = devId_;
+    desc->devId = dev_id_;
 }
 
 template<>
@@ -69,14 +69,14 @@ void
 memoryHandler<DRAM_SEG>::populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
     desc->addr = reinterpret_cast<uintptr_t>(addr_) + entry_index * entry_size;
     desc->len = entry_size;
-    desc->devId = devId_;
+    desc->devId = dev_id_;
     desc->metadataP = md_;
 }
 
 // OBJ_SEG specific functions
 template<>
-memoryHandler<OBJ_SEG>::memoryHandler(size_t len, int devId) : len_(len),
-                                                               devId_(devId) {}
+memoryHandler<OBJ_SEG>::memoryHandler(size_t len, int dev_id) : len_(len),
+                                                                dev_id_(dev_id) {}
 
 template<> memoryHandler<OBJ_SEG>::~memoryHandler() {}
 
@@ -104,7 +104,7 @@ void
 memoryHandler<OBJ_SEG>::populateBlobDesc(nixlBlobDesc *desc, int buf_index) {
     desc->addr = 0;
     desc->len = len_;
-    desc->devId = devId_;
+    desc->devId = dev_id_;
     desc->metaInfo = absl::StrFormat("test-obj-key-%d", buf_index);
 }
 
@@ -113,6 +113,6 @@ void
 memoryHandler<OBJ_SEG>::populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
     desc->addr = 0;
     desc->len = len_;
-    desc->devId = devId_;
+    desc->devId = dev_id_;
     desc->metadataP = md_;
 }

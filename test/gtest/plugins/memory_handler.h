@@ -28,7 +28,7 @@
 
 template<nixl_mem_t memType> class memoryHandler {
 public:
-    memoryHandler(size_t len, int devId) {
+    memoryHandler(size_t len, int dev_id) {
         CHECK(false) << "memoryHandler() is not implemented for <" << memType << "> memory type";
     }
 
@@ -75,7 +75,7 @@ public:
 private:
     void *addr_;
     size_t len_;
-    int devId_;
+    int dev_id_;
     nixlBackendMD *md_;
 };
 

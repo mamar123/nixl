@@ -25,7 +25,7 @@ namespace plugins_common {
 /*
  * Base class for all plugin tests.
  */
-class SetupBackendTestFixture : public testing::TestWithParam<nixlBackendInitParams> {
+class setupBackendTestFixture : public testing::TestWithParam<nixlBackendInitParams> {
 protected:
     std::unique_ptr<nixlBackendEngine> remote_backend_engine_;
     std::unique_ptr<nixlBackendEngine> local_backend_engine_;

@@ -34,14 +34,14 @@ const nixlBackendInitParams obj_test_params = {.localAgent = "Agent1",
                                                .pthrDelay = 0,
                                                .syncMode = nixl_thread_sync_t::NIXL_THREAD_SYNC_RW};
 
-class SetupObjTestFixture : public plugins_common::SetupBackendTestFixture {
+class setupObjTestFixture : public plugins_common::setupBackendTestFixture {
 protected:
-    SetupObjTestFixture() {
+    setupObjTestFixture() {
         local_backend_engine_ = std::make_unique<nixlObjEngine>(&GetParam());
     }
 };
 
-TEST_P(SetupObjTestFixture, XferTest) {
+TEST_P(setupObjTestFixture, XferTest) {
     transferHandler<DRAM_SEG, OBJ_SEG> transfer(
         local_backend_engine_, local_backend_engine_, false, 1);
     transfer.setLocalMem();
@@ -51,7 +51,7 @@ TEST_P(SetupObjTestFixture, XferTest) {
     transfer.checkLocalMem();
 }
 
-TEST_P(SetupObjTestFixture, XferMultiBufsTest) {
+TEST_P(setupObjTestFixture, XferMultiBufsTest) {
     transferHandler<DRAM_SEG, OBJ_SEG> transfer(
         local_backend_engine_, local_backend_engine_, false, 3);
     transfer.setLocalMem();
@@ -61,6 +61,6 @@ TEST_P(SetupObjTestFixture, XferMultiBufsTest) {
     transfer.checkLocalMem();
 }
 
-INSTANTIATE_TEST_SUITE_P(ObjTests, SetupObjTestFixture, testing::Values(obj_test_params));
+INSTANTIATE_TEST_SUITE_P(ObjTests, setupObjTestFixture, testing::Values(obj_test_params));
 
 } // namespace gtest::obj_plugin
