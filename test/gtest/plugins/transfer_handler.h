@@ -20,10 +20,10 @@
 #include "backend_engine.h"
 #include "memory_handler.h"
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType> class transferHandler {
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType> class transferHandler {
 public:
-    transferHandler(std::unique_ptr<nixlBackendEngine> &local_engine,
-                    std::unique_ptr<nixlBackendEngine> &xfer_engine,
+    transferHandler(std::unique_ptr<nixlBackendEngine> &src_engine,
+                    std::unique_ptr<nixlBackendEngine> &dst_engine,
                     bool split_buf = true,
                     int num_bufs = 1);
 
@@ -48,20 +48,21 @@ private:
     static constexpr size_t ENTRY_SIZE = 16;
     static constexpr size_t BUF_SIZE = NUM_ENTRIES * ENTRY_SIZE;
     static constexpr size_t MAX_NUM_BUFS = 3;
-    static constexpr std::string_view local_agent_ = "Agent1";
-    static constexpr std::string_view remote_agent_ = "Agent2";
+    static constexpr std::string_view LOCAL_AGENT_NAME = "Agent1";
+    static constexpr std::string_view REMOTE_AGENT_NAME = "Agent2";
 
-    std::unique_ptr<memoryHandler<localMemType>> local_mem_[MAX_NUM_BUFS];
-    std::unique_ptr<memoryHandler<xferMemType>> xfer_mem_[MAX_NUM_BUFS];
+    std::unique_ptr<memoryHandler<srcMemType>> src_mem_[MAX_NUM_BUFS];
+    std::unique_ptr<memoryHandler<dstMemType>> dst_mem_[MAX_NUM_BUFS];
     std::unique_ptr<nixl_meta_dlist_t> src_descs_;
     std::unique_ptr<nixl_meta_dlist_t> dst_descs_;
-    nixlBackendEngine *local_backend_engine_;
-    nixlBackendEngine *xfer_backend_engine_;
+    nixlBackendEngine *src_backend_engine_;
+    nixlBackendEngine *dst_backend_engine_;
     nixl_opt_b_args_t xfer_opt_args_;
     nixlBackendMD *xfer_loaded_md_;
-    std::string xfer_agent_;
-    int local_dev_id_;
-    int xfer_dev_id_;
+    std::string src_agent_name_;
+    std::string dst_agent_name_;
+    int src_dev_id_;
+    int dst_dev_id_;
     int num_bufs_;
 
     nixl_status_t

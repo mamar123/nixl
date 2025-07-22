@@ -21,134 +21,135 @@
 #include "common/nixl_log.h"
 #include "transfer_handler.h"
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
-transferHandler<localMemType, xferMemType>::transferHandler(
-    std::unique_ptr<nixlBackendEngine> &local_engine,
-    std::unique_ptr<nixlBackendEngine> &xfer_engine,
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
+transferHandler<srcMemType, dstMemType>::transferHandler(
+    std::unique_ptr<nixlBackendEngine> &src_engine,
+    std::unique_ptr<nixlBackendEngine> &dst_engine,
     bool split_buf,
     int num_bufs)
     : num_bufs_(num_bufs) {
 
     CHECK(num_bufs_ <= (int)MAX_NUM_BUFS) << "Number of buffers exceeds maximum number of buffers";
-    local_backend_engine_ = local_engine.get();
-    local_dev_id_ = 0;
+    src_backend_engine_ = src_engine.get();
+    src_agent_name_ = LOCAL_AGENT_NAME;
+    src_dev_id_ = 0;
 
-    bool remote_xfer = local_engine.get() != xfer_engine.get();
+    bool remote_xfer = src_engine.get() != dst_engine.get();
     if (remote_xfer) {
-        CHECK(local_engine->supportsRemote()) << "Local engine does not support remote transfers";
-        xfer_backend_engine_ = xfer_engine.get();
-        xfer_agent_ = remote_agent_;
-        xfer_dev_id_ = 1;
+        CHECK(src_engine->supportsRemote()) << "Local engine does not support remote transfers";
+        dst_backend_engine_ = dst_engine.get();
+        dst_agent_name_ = REMOTE_AGENT_NAME;
+        dst_dev_id_ = 1;
         EXPECT_EQ(verifyConnInfo(), NIXL_SUCCESS);
     } else {
-        CHECK(local_engine->supportsLocal()) << "Local engine does not support local transfers";
-        xfer_backend_engine_ = local_engine.get();
-        xfer_agent_ = local_agent_;
-        xfer_dev_id_ = local_dev_id_;
+        CHECK(src_engine->supportsLocal()) << "Local engine does not support local transfers";
+        dst_backend_engine_ = src_engine.get();
+        dst_agent_name_ = LOCAL_AGENT_NAME;
+        dst_dev_id_ = src_dev_id_;
     }
 
     for (int i = 0; i < num_bufs_; i++) {
-        local_mem_[i] = std::make_unique<memoryHandler<localMemType>>(BUF_SIZE, local_dev_id_ + i);
-        xfer_mem_[i] = std::make_unique<memoryHandler<xferMemType>>(BUF_SIZE, xfer_dev_id_ + i);
+        src_mem_[i] = std::make_unique<memoryHandler<srcMemType>>(BUF_SIZE, src_dev_id_ + i);
+        dst_mem_[i] = std::make_unique<memoryHandler<dstMemType>>(BUF_SIZE, dst_dev_id_ + i);
     }
 
-    if (xfer_backend_engine_->supportsNotif()) setupNotifs("Test");
+    if (dst_backend_engine_->supportsNotif()) setupNotifs("Test");
 
     EXPECT_EQ(registerMems(), NIXL_SUCCESS);
     EXPECT_EQ(prepMems(split_buf, remote_xfer), NIXL_SUCCESS);
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
-transferHandler<localMemType, xferMemType>::~transferHandler() {
-    EXPECT_EQ(local_backend_engine_->unloadMD(xfer_loaded_md_), NIXL_SUCCESS);
-    EXPECT_EQ(local_backend_engine_->disconnect(xfer_agent_), NIXL_SUCCESS);
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
+transferHandler<srcMemType, dstMemType>::~transferHandler() {
+    EXPECT_EQ(src_backend_engine_->unloadMD(xfer_loaded_md_), NIXL_SUCCESS);
+    EXPECT_EQ(src_backend_engine_->disconnect(dst_agent_name_), NIXL_SUCCESS);
     EXPECT_EQ(deregisterMems(), NIXL_SUCCESS);
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 void
-transferHandler<localMemType, xferMemType>::testTransfer(nixl_xfer_op_t op) {
+transferHandler<srcMemType, dstMemType>::testTransfer(nixl_xfer_op_t op) {
     EXPECT_EQ(performTransfer(op), NIXL_SUCCESS);
     EXPECT_EQ(verifyTransfer(op), NIXL_SUCCESS);
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 void
-transferHandler<localMemType, xferMemType>::setLocalMem() {
+transferHandler<srcMemType, dstMemType>::setLocalMem() {
     for (int i = 0; i < num_bufs_; i++)
-        local_mem_[i]->set(LOCAL_BUF_BYTE + i);
+        src_mem_[i]->set(LOCAL_BUF_BYTE + i);
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 void
-transferHandler<localMemType, xferMemType>::resetLocalMem() {
+transferHandler<srcMemType, dstMemType>::resetLocalMem() {
     for (int i = 0; i < num_bufs_; i++)
-        local_mem_[i]->reset();
+        src_mem_[i]->reset();
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 void
-transferHandler<localMemType, xferMemType>::checkLocalMem() {
+transferHandler<srcMemType, dstMemType>::checkLocalMem() {
     for (int i = 0; i < num_bufs_; i++)
-        EXPECT_TRUE(local_mem_[i]->check(LOCAL_BUF_BYTE + i));
+        EXPECT_TRUE(src_mem_[i]->check(LOCAL_BUF_BYTE + i));
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 nixl_status_t
-transferHandler<localMemType, xferMemType>::registerMems() {
-    nixlBlobDesc local_desc;
-    nixlBlobDesc xfer_desc;
+transferHandler<srcMemType, dstMemType>::registerMems() {
+    nixlBlobDesc src_desc;
+    nixlBlobDesc dst_desc;
     nixl_status_t ret;
     nixlBackendMD *md;
 
     for (int i = 0; i < num_bufs_; i++) {
-        local_mem_[i]->populateBlobDesc(&local_desc, i);
-        ret = local_backend_engine_->registerMem(local_desc, localMemType, md);
+        src_mem_[i]->populateBlobDesc(&src_desc, i);
+        ret = src_backend_engine_->registerMem(src_desc, srcMemType, md);
         if (ret != NIXL_SUCCESS) {
-            NIXL_ERROR << "Failed to register local memory: " << ret;
+            NIXL_ERROR << "Failed to register src memory: " << ret;
             return ret;
         }
-        local_mem_[i]->setMD(md);
+        src_mem_[i]->setMD(md);
 
-        xfer_mem_[i]->populateBlobDesc(&xfer_desc, i);
-        ret = xfer_backend_engine_->registerMem(xfer_desc, xferMemType, md);
+        dst_mem_[i]->populateBlobDesc(&dst_desc, i);
+        ret = dst_backend_engine_->registerMem(dst_desc, dstMemType, md);
         if (ret != NIXL_SUCCESS) {
-            NIXL_ERROR << "Failed to register xfer memory: " << ret;
+            NIXL_ERROR << "Failed to register dst memory: " << ret;
             return ret;
         }
-        xfer_mem_[i]->setMD(md);
+        dst_mem_[i]->setMD(md);
     }
     return NIXL_SUCCESS;
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 nixl_status_t
-transferHandler<localMemType, xferMemType>::deregisterMems() {
+transferHandler<srcMemType, dstMemType>::deregisterMems() {
     nixl_status_t ret;
     for (int i = 0; i < num_bufs_; i++) {
-        ret = local_backend_engine_->deregisterMem(local_mem_[i]->getMD());
+        ret = src_backend_engine_->deregisterMem(src_mem_[i]->getMD());
         if (ret != NIXL_SUCCESS) {
-            NIXL_ERROR << "Failed to deregister local memory: " << ret;
+            NIXL_ERROR << "Failed to deregister src memory: " << ret;
             return ret;
         }
-        ret = xfer_backend_engine_->deregisterMem(xfer_mem_[i]->getMD());
+        ret = dst_backend_engine_->deregisterMem(dst_mem_[i]->getMD());
         if (ret != NIXL_SUCCESS) {
-            NIXL_ERROR << "Failed to deregister xfer memory: " << ret;
+            NIXL_ERROR << "Failed to deregister dst memory: " << ret;
             return ret;
         }
     }
     return NIXL_SUCCESS;
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 nixl_status_t
-transferHandler<localMemType, xferMemType>::prepMems(bool split_buf, bool remote_xfer) {
+transferHandler<srcMemType, dstMemType>::prepMems(bool split_buf, bool remote_xfer) {
     nixl_status_t ret;
 
     if (remote_xfer) {
         nixlBlobDesc info;
-        xfer_mem_[0]->populateBlobDesc(&info);
-        ret = local_backend_engine_->getPublicData(xfer_mem_[0]->getMD(), info.metaInfo);
+        dst_mem_[0]->populateBlobDesc(&info);
+        ret = src_backend_engine_->getPublicData(dst_mem_[0]->getMD(), info.metaInfo);
         if (ret != NIXL_SUCCESS) {
             NIXL_ERROR << "Failed to get meta info";
             return ret;
@@ -158,26 +159,26 @@ transferHandler<localMemType, xferMemType>::prepMems(bool split_buf, bool remote
             return ret;
         }
 
-        ret = local_backend_engine_->loadRemoteMD(info, xferMemType, xfer_agent_, xfer_loaded_md_);
+        ret = src_backend_engine_->loadRemoteMD(info, dstMemType, dst_agent_name_, xfer_loaded_md_);
     } else {
-        ret = local_backend_engine_->loadLocalMD(xfer_mem_[0]->getMD(), xfer_loaded_md_);
+        ret = src_backend_engine_->loadLocalMD(dst_mem_[0]->getMD(), xfer_loaded_md_);
     }
     if (ret != NIXL_SUCCESS) {
-        NIXL_ERROR << "Failed to load MD from " << xfer_agent_;
+        NIXL_ERROR << "Failed to load MD from " << dst_agent_name_;
         return ret;
     }
 
-    src_descs_ = std::make_unique<nixl_meta_dlist_t>(localMemType);
-    dst_descs_ = std::make_unique<nixl_meta_dlist_t>(xferMemType);
+    src_descs_ = std::make_unique<nixl_meta_dlist_t>(srcMemType);
+    dst_descs_ = std::make_unique<nixl_meta_dlist_t>(dstMemType);
 
     int num_entries = split_buf ? NUM_ENTRIES : 1;
     int entry_size = split_buf ? ENTRY_SIZE : BUF_SIZE;
     for (int i = 0; i < num_bufs_; i++) {
         for (int j = 0; j < num_entries; j++) {
             nixlMetaDesc desc;
-            local_mem_[i]->populateMetaDesc(&desc, j, entry_size);
+            src_mem_[i]->populateMetaDesc(&desc, j, entry_size);
             src_descs_->addDesc(desc);
-            xfer_mem_[i]->populateMetaDesc(&desc, j, entry_size);
+            dst_mem_[i]->populateMetaDesc(&desc, j, entry_size);
             dst_descs_->addDesc(desc);
         }
     }
@@ -185,21 +186,21 @@ transferHandler<localMemType, xferMemType>::prepMems(bool split_buf, bool remote
     return NIXL_SUCCESS;
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 nixl_status_t
-transferHandler<localMemType, xferMemType>::performTransfer(nixl_xfer_op_t op) {
+transferHandler<srcMemType, dstMemType>::performTransfer(nixl_xfer_op_t op) {
     nixlBackendReqH *handle;
     nixl_status_t ret;
 
-    ret = local_backend_engine_->prepXfer(
-        op, *src_descs_, *dst_descs_, xfer_agent_, handle, &xfer_opt_args_);
+    ret = src_backend_engine_->prepXfer(
+        op, *src_descs_, *dst_descs_, dst_agent_name_, handle, &xfer_opt_args_);
     if (ret != NIXL_SUCCESS) {
         NIXL_ERROR << "Failed to prepare transfer";
         return ret;
     }
 
-    ret = local_backend_engine_->postXfer(
-        op, *src_descs_, *dst_descs_, xfer_agent_, handle, &xfer_opt_args_);
+    ret = src_backend_engine_->postXfer(
+        op, *src_descs_, *dst_descs_, dst_agent_name_, handle, &xfer_opt_args_);
     if (ret != NIXL_SUCCESS && ret != NIXL_IN_PROG) {
         NIXL_ERROR << "Failed to post transfer";
         return ret;
@@ -210,20 +211,20 @@ transferHandler<localMemType, xferMemType>::performTransfer(nixl_xfer_op_t op) {
     NIXL_INFO << "\t\tWaiting for transfer to complete...";
 
     while (ret == NIXL_IN_PROG && absl::Now() < end_time) {
-        ret = local_backend_engine_->checkXfer(handle);
+        ret = src_backend_engine_->checkXfer(handle);
         if (ret != NIXL_SUCCESS && ret != NIXL_IN_PROG) {
             NIXL_ERROR << "Transfer check failed";
             return ret;
         }
 
-        if (xfer_backend_engine_->supportsProgTh()) {
-            xfer_backend_engine_->progress();
+        if (dst_backend_engine_->supportsProgTh()) {
+            dst_backend_engine_->progress();
         }
     }
 
     NIXL_INFO << "\nTransfer complete";
 
-    ret = local_backend_engine_->releaseReqH(handle);
+    ret = src_backend_engine_->releaseReqH(handle);
     if (ret != NIXL_SUCCESS) {
         NIXL_ERROR << "Failed to release transfer handle";
         return ret;
@@ -232,10 +233,10 @@ transferHandler<localMemType, xferMemType>::performTransfer(nixl_xfer_op_t op) {
     return NIXL_SUCCESS;
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 nixl_status_t
-transferHandler<localMemType, xferMemType>::verifyTransfer(nixl_xfer_op_t op) {
-    if (local_backend_engine_->supportsNotif()) {
+transferHandler<srcMemType, dstMemType>::verifyTransfer(nixl_xfer_op_t op) {
+    if (src_backend_engine_->supportsNotif()) {
         if (!verifyNotifs(xfer_opt_args_.notifMsg)) {
             NIXL_ERROR << "Failed in notifications verification";
             return NIXL_ERR_BACKEND;
@@ -248,9 +249,9 @@ transferHandler<localMemType, xferMemType>::verifyTransfer(nixl_xfer_op_t op) {
     return NIXL_SUCCESS;
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 nixl_status_t
-transferHandler<localMemType, xferMemType>::verifyNotifs(std::string &msg) {
+transferHandler<srcMemType, dstMemType>::verifyNotifs(std::string &msg) {
     notif_list_t target_notifs;
     int num_notifs = 0;
     nixl_status_t ret;
@@ -260,14 +261,14 @@ transferHandler<localMemType, xferMemType>::verifyNotifs(std::string &msg) {
     auto end_time = absl::Now() + absl::Seconds(3);
 
     while (num_notifs == 0 && absl::Now() < end_time) {
-        ret = xfer_backend_engine_->getNotifs(target_notifs);
+        ret = dst_backend_engine_->getNotifs(target_notifs);
         if (ret != NIXL_SUCCESS) {
             NIXL_ERROR << "Failed to get notifications";
             return ret;
         }
         num_notifs = target_notifs.size();
-        if (local_backend_engine_->supportsProgTh()) {
-            local_backend_engine_->progress();
+        if (src_backend_engine_->supportsProgTh()) {
+            src_backend_engine_->progress();
         }
     }
 
@@ -278,8 +279,8 @@ transferHandler<localMemType, xferMemType>::verifyNotifs(std::string &msg) {
         return NIXL_ERR_BACKEND;
     }
 
-    if (target_notifs.front().first != local_agent_) {
-        NIXL_ERROR << "Expected notification from " << local_agent_ << ", got "
+    if (target_notifs.front().first != src_agent_name_) {
+        NIXL_ERROR << "Expected notification from " << src_agent_name_ << ", got "
                    << target_notifs.front().first;
         return NIXL_ERR_BACKEND;
     }
@@ -296,32 +297,32 @@ transferHandler<localMemType, xferMemType>::verifyNotifs(std::string &msg) {
     return NIXL_SUCCESS;
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 void
-transferHandler<localMemType, xferMemType>::setupNotifs(std::string msg) {
+transferHandler<srcMemType, dstMemType>::setupNotifs(std::string msg) {
     xfer_opt_args_.notifMsg = msg;
     xfer_opt_args_.hasNotif = true;
 }
 
-template<nixl_mem_t localMemType, nixl_mem_t xferMemType>
+template<nixl_mem_t srcMemType, nixl_mem_t dstMemType>
 nixl_status_t
-transferHandler<localMemType, xferMemType>::verifyConnInfo() {
+transferHandler<srcMemType, dstMemType>::verifyConnInfo() {
     std::string conn_info;
     nixl_status_t ret;
 
-    ret = local_backend_engine_->getConnInfo(conn_info);
+    ret = src_backend_engine_->getConnInfo(conn_info);
     if (ret != NIXL_SUCCESS) {
         NIXL_ERROR << "Failed to get connection info";
         return ret;
     }
 
-    ret = xfer_backend_engine_->getConnInfo(conn_info);
+    ret = dst_backend_engine_->getConnInfo(conn_info);
     if (ret != NIXL_SUCCESS) {
         NIXL_ERROR << "Failed to get remote connection info";
         return ret;
     }
 
-    ret = local_backend_engine_->loadRemoteConnInfo(xfer_agent_, conn_info);
+    ret = src_backend_engine_->loadRemoteConnInfo(dst_agent_name_, conn_info);
     if (ret != NIXL_SUCCESS) {
         NIXL_ERROR << "Failed to load remote connection info";
         return ret;
@@ -332,8 +333,8 @@ transferHandler<localMemType, xferMemType>::verifyConnInfo() {
 
 // Specialize for transferHandler<DRAM_SEG, OBJ_SEG>
 template transferHandler<DRAM_SEG, OBJ_SEG>::transferHandler(
-    std::unique_ptr<nixlBackendEngine> &local_engine,
-    std::unique_ptr<nixlBackendEngine> &xfer_engine,
+    std::unique_ptr<nixlBackendEngine> &src_engine,
+    std::unique_ptr<nixlBackendEngine> &dst_engine,
     bool split_buf,
     int num_bufs);
 template transferHandler<DRAM_SEG, OBJ_SEG>::~transferHandler();
