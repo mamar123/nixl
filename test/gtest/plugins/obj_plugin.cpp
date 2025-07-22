@@ -22,11 +22,18 @@
 #include "obj/obj_backend.h"
 
 namespace gtest::obj_plugin {
+/**
+ * @note To run OBJ plugin tests, the following environment variables must be set:
+ *       - AWS_ACCESS_KEY_ID
+ *       - AWS_SECRET_ACCESS_KEY
+ *       - AWS_DEFAULT_REGION
+ *       - AWS_DEFAULT_BUCKET
+ *
+ * These variables are required for authenticating and interacting with the S3 bucket
+ * used during the tests.
+ */
 
-nixl_b_params_t obj_params{
-    {"bucket", "nixl-ci-test"},
-};
-
+nixl_b_params_t obj_params;
 const nixlBackendInitParams obj_test_params = {.localAgent = "Agent1",
                                                .type = "OBJ",
                                                .customParams = &obj_params,
