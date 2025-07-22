@@ -44,13 +44,12 @@ const nixlBackendInitParams obj_test_params = {.localAgent = "Agent1",
 class setupObjTestFixture : public plugins_common::setupBackendTestFixture {
 protected:
     setupObjTestFixture() {
-        local_backend_engine_ = std::make_unique<nixlObjEngine>(&GetParam());
+        localBackendEngine_ = std::make_shared<nixlObjEngine>(&GetParam());
     }
 };
 
 TEST_P(setupObjTestFixture, XferTest) {
-    transferHandler<DRAM_SEG, OBJ_SEG> transfer(
-        local_backend_engine_, local_backend_engine_, false, 1);
+    transferHandler<DRAM_SEG, OBJ_SEG> transfer(localBackendEngine_, localBackendEngine_, false, 1);
     transfer.setLocalMem();
     transfer.testTransfer(NIXL_WRITE);
     transfer.resetLocalMem();
@@ -59,8 +58,7 @@ TEST_P(setupObjTestFixture, XferTest) {
 }
 
 TEST_P(setupObjTestFixture, XferMultiBufsTest) {
-    transferHandler<DRAM_SEG, OBJ_SEG> transfer(
-        local_backend_engine_, local_backend_engine_, false, 3);
+    transferHandler<DRAM_SEG, OBJ_SEG> transfer(localBackendEngine_, localBackendEngine_, false, 3);
     transfer.setLocalMem();
     transfer.testTransfer(NIXL_WRITE);
     transfer.resetLocalMem();

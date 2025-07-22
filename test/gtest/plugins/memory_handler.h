@@ -25,30 +25,25 @@
 
 template<nixl_mem_t memType> class memoryHandler;
 
-template<>
-class memoryHandler<DRAM_SEG> {
+template<> class memoryHandler<DRAM_SEG> {
 public:
-    memoryHandler(size_t len, int dev_id) : len_(len), dev_id_(dev_id) {
-        addr_ = malloc(len);
-    }
+    memoryHandler(size_t len, int dev_id) : buf_(len), len_(len), devId_(dev_id) {}
 
-    ~memoryHandler() {
-        free(addr_);
-    }
+    ~memoryHandler() = default;
 
     void
-    set(char byte) {
-        for (size_t i = 0; i < len_; i++)
-            ((char *)addr_)[i] = byte + i;
+    setIncreasing(uint8_t start_byte) {
+        for (auto &entry : buf_)
+            entry = start_byte++;
     }
 
     bool
-    check(char byte) {
-        for (size_t i = 0; i < len_; i++) {
-            uint8_t expected_byte = (uint8_t)byte + i;
-            if (((char *)addr_)[i] != expected_byte) {
-                NIXL_ERROR << "Verification failed at index " << i << "! local: " << ((char *)addr_)[i]
-                        << ", expected: " << expected_byte;
+    checkIncreasing(uint8_t start_byte) {
+        for (auto &entry : buf_) {
+            uint8_t expected_byte = start_byte++;
+            if (entry != expected_byte) {
+                NIXL_ERROR << "Verification failed! local: " << entry
+                           << ", expected: " << expected_byte;
                 return false;
             }
         }
@@ -57,21 +52,21 @@ public:
 
     void
     reset() {
-        memset(addr_, 0x00, len_);
+        std::fill(buf_.begin(), buf_.end(), 0x00);
     }
 
     void
     populateBlobDesc(nixlBlobDesc *desc, int buf_index = 0) {
-        desc->addr = reinterpret_cast<uintptr_t>(addr_);
+        desc->addr = reinterpret_cast<uintptr_t>(buf_.data());
         desc->len = len_;
-        desc->devId = dev_id_;
+        desc->devId = devId_;
     }
 
     void
     populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
-        desc->addr = reinterpret_cast<uintptr_t>(addr_) + entry_index * entry_size;
+        desc->addr = reinterpret_cast<uintptr_t>(buf_.data()) + entry_index * entry_size;
         desc->len = entry_size;
-        desc->devId = dev_id_;
+        desc->devId = devId_;
         desc->metadataP = md_;
     }
 
@@ -86,41 +81,23 @@ public:
     }
 
 private:
-    void *addr_;
+    std::vector<uint8_t> buf_;
     size_t len_;
-    int dev_id_;
+    int devId_;
     nixlBackendMD *md_;
 };
 
-template<>
-class memoryHandler<OBJ_SEG> {
+template<> class memoryHandler<OBJ_SEG> {
 public:
-    memoryHandler(size_t len, int dev_id) : len_(len),
-                                            dev_id_(dev_id) {}
+    memoryHandler(size_t len, int dev_id) : len_(len), devId_(dev_id) {}
 
     ~memoryHandler() = default;
-
-    void
-    set(char byte) {
-        CHECK(false) << "set() is not supported for OBJ_SEG type";
-    }
-
-    bool
-    check(char byte) {
-        CHECK(false) << "check() is not supported for OBJ_SEG type";
-        return false;
-    }
-
-    void
-    reset() {
-        CHECK(false) << "reset() is not supported for OBJ_SEG type";
-    }
 
     void
     populateBlobDesc(nixlBlobDesc *desc, int buf_index = 0) {
         desc->addr = 0;
         desc->len = len_;
-        desc->devId = dev_id_;
+        desc->devId = devId_;
         desc->metaInfo = absl::StrFormat("test-obj-key-%d", buf_index);
     }
 
@@ -128,7 +105,7 @@ public:
     populateMetaDesc(nixlMetaDesc *desc, int entry_index, size_t entry_size) {
         desc->addr = 0;
         desc->len = len_;
-        desc->devId = dev_id_;
+        desc->devId = devId_;
         desc->metadataP = md_;
     }
 
@@ -144,7 +121,7 @@ public:
 
 private:
     size_t len_;
-    int dev_id_;
+    int devId_;
     nixlBackendMD *md_;
 };
 

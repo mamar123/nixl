@@ -27,15 +27,17 @@ namespace plugins_common {
  */
 class setupBackendTestFixture : public testing::TestWithParam<nixlBackendInitParams> {
 protected:
-    std::unique_ptr<nixlBackendEngine> remote_backend_engine_;
-    std::unique_ptr<nixlBackendEngine> local_backend_engine_;
+    std::shared_ptr<nixlBackendEngine> localBackendEngine_;
+    std::shared_ptr<nixlBackendEngine> remoteBackendEngine_;
 
     void
     SetUp() {
-        CHECK(!local_backend_engine_->getInitErr()) << "Failed to initialize backend engine";
-        if (remote_backend_engine_)
-            CHECK(!remote_backend_engine_->getInitErr())
+        ASSERT_FALSE(localBackendEngine_->getInitErr())
+            << "Failed to initialize local backend engine";
+        if (remoteBackendEngine_) {
+            ASSERT_FALSE(remoteBackendEngine_->getInitErr())
                 << "Failed to initialize remote backend engine";
+        }
     }
 };
 

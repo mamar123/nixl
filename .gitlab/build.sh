@@ -118,9 +118,11 @@ curl -fSsL "https://github.com/openucx/ucx/tarball/${UCX_VERSION}" | tar xz
 
 ( \
   git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp.git --branch 1.11.581 && \
-      mkdir aws_sdk_build && cd aws_sdk_build && \
-      cmake ../aws-sdk-cpp/ -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr/local && \
-      make -j$(nproc) && make install
+  mkdir aws_sdk_build && \
+  cd aws_sdk_build && \
+  cmake ../aws-sdk-cpp/ -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3" -DENABLE_TESTING=OFF -DCMAKE_INSTALL_PREFIX=/usr/local && \
+  make -j$(nproc) && \
+  $SUDO make install
 )
 
 export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/cuda/lib64

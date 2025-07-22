@@ -26,46 +26,44 @@
 
 template<nixl_mem_t srcMemType, nixl_mem_t dstMemType> class transferHandler {
 public:
-    transferHandler(
-        std::unique_ptr<nixlBackendEngine> &src_engine,
-        std::unique_ptr<nixlBackendEngine> &dst_engine,
-        bool split_buf,
-        int num_bufs)
-        : num_bufs_(num_bufs) {
+    transferHandler(std::shared_ptr<nixlBackendEngine> src_engine,
+                    std::shared_ptr<nixlBackendEngine> dst_engine,
+                    bool split_buf,
+                    int num_bufs)
+        : srcBackendEngine_(src_engine),
+          srcAgentName_(LOCAL_AGENT_NAME),
+          srcDevId_(0) {
 
-        CHECK(num_bufs_ <= (int)MAX_NUM_BUFS) << "Number of buffers exceeds maximum number of buffers";
-        src_backend_engine_ = src_engine.get();
-        src_agent_name_ = LOCAL_AGENT_NAME;
-        src_dev_id_ = 0;
-
-        bool remote_xfer = src_engine.get() != dst_engine.get();
+        bool remote_xfer = src_engine != dst_engine;
         if (remote_xfer) {
             CHECK(src_engine->supportsRemote()) << "Local engine does not support remote transfers";
-            dst_backend_engine_ = dst_engine.get();
-            dst_agent_name_ = REMOTE_AGENT_NAME;
-            dst_dev_id_ = 1;
+            dstBackendEngine_ = dst_engine;
+            dstAgentName_ = REMOTE_AGENT_NAME;
+            dstDevId_ = 1;
             EXPECT_EQ(verifyConnInfo(), NIXL_SUCCESS);
         } else {
             CHECK(src_engine->supportsLocal()) << "Local engine does not support local transfers";
-            dst_backend_engine_ = src_engine.get();
-            dst_agent_name_ = LOCAL_AGENT_NAME;
-            dst_dev_id_ = src_dev_id_;
+            dstBackendEngine_ = src_engine;
+            dstAgentName_ = LOCAL_AGENT_NAME;
+            dstDevId_ = srcDevId_;
         }
 
-        for (int i = 0; i < num_bufs_; i++) {
-            src_mem_[i] = std::make_unique<memoryHandler<srcMemType>>(BUF_SIZE, src_dev_id_ + i);
-            dst_mem_[i] = std::make_unique<memoryHandler<dstMemType>>(BUF_SIZE, dst_dev_id_ + i);
+        for (int i = 0; i < num_bufs; i++) {
+            srcMem_.emplace_back(
+                std::make_unique<memoryHandler<srcMemType>>(BUF_SIZE, srcDevId_ + i));
+            dstMem_.emplace_back(
+                std::make_unique<memoryHandler<dstMemType>>(BUF_SIZE, dstDevId_ + i));
         }
 
-        if (dst_backend_engine_->supportsNotif()) setupNotifs("Test");
+        if (dstBackendEngine_->supportsNotif()) setupNotifs("Test");
 
         EXPECT_EQ(registerMems(), NIXL_SUCCESS);
         EXPECT_EQ(prepMems(split_buf, remote_xfer), NIXL_SUCCESS);
     }
 
     ~transferHandler() {
-        EXPECT_EQ(src_backend_engine_->unloadMD(xfer_loaded_md_), NIXL_SUCCESS);
-        EXPECT_EQ(src_backend_engine_->disconnect(dst_agent_name_), NIXL_SUCCESS);
+        EXPECT_EQ(srcBackendEngine_->unloadMD(xferLoadedMd_), NIXL_SUCCESS);
+        EXPECT_EQ(srcBackendEngine_->disconnect(dstAgentName_), NIXL_SUCCESS);
         EXPECT_EQ(deregisterMems(), NIXL_SUCCESS);
     }
 
@@ -77,45 +75,43 @@ public:
 
     void
     setLocalMem() {
-        for (int i = 0; i < num_bufs_; i++)
-            src_mem_[i]->set(LOCAL_BUF_BYTE + i);
+        for (size_t i = 0; i < srcMem_.size(); i++)
+            srcMem_[i]->setIncreasing(LOCAL_BUF_BYTE + i);
     }
 
     void
     resetLocalMem() {
-        for (int i = 0; i < num_bufs_; i++)
-            src_mem_[i]->reset();
+        for (const auto &mem : srcMem_)
+            mem->reset();
     }
 
     void
     checkLocalMem() {
-        for (int i = 0; i < num_bufs_; i++)
-            EXPECT_TRUE(src_mem_[i]->check(LOCAL_BUF_BYTE + i));
+        for (size_t i = 0; i < srcMem_.size(); i++)
+            EXPECT_TRUE(srcMem_[i]->checkIncreasing(LOCAL_BUF_BYTE + i));
     }
 
 private:
-    static constexpr char LOCAL_BUF_BYTE = 0x11;
-    static constexpr char XFER_BUF_BYTE = 0x22;
+    static constexpr uint8_t LOCAL_BUF_BYTE = 0x11;
+    static constexpr uint8_t XFER_BUF_BYTE = 0x22;
     static constexpr size_t NUM_ENTRIES = 4;
     static constexpr size_t ENTRY_SIZE = 16;
     static constexpr size_t BUF_SIZE = NUM_ENTRIES * ENTRY_SIZE;
-    static constexpr size_t MAX_NUM_BUFS = 3;
     static constexpr std::string_view LOCAL_AGENT_NAME = "Agent1";
     static constexpr std::string_view REMOTE_AGENT_NAME = "Agent2";
 
-    std::unique_ptr<memoryHandler<srcMemType>> src_mem_[MAX_NUM_BUFS];
-    std::unique_ptr<memoryHandler<dstMemType>> dst_mem_[MAX_NUM_BUFS];
-    std::unique_ptr<nixl_meta_dlist_t> src_descs_;
-    std::unique_ptr<nixl_meta_dlist_t> dst_descs_;
-    nixlBackendEngine *src_backend_engine_;
-    nixlBackendEngine *dst_backend_engine_;
-    nixl_opt_b_args_t xfer_opt_args_;
-    nixlBackendMD *xfer_loaded_md_;
-    std::string src_agent_name_;
-    std::string dst_agent_name_;
-    int src_dev_id_;
-    int dst_dev_id_;
-    int num_bufs_;
+    std::vector<std::unique_ptr<memoryHandler<srcMemType>>> srcMem_;
+    std::vector<std::unique_ptr<memoryHandler<dstMemType>>> dstMem_;
+    std::shared_ptr<nixlBackendEngine> srcBackendEngine_;
+    std::shared_ptr<nixlBackendEngine> dstBackendEngine_;
+    std::unique_ptr<nixl_meta_dlist_t> srcDescs_;
+    std::unique_ptr<nixl_meta_dlist_t> dstDescs_;
+    nixl_opt_b_args_t xferOptArgs_;
+    nixlBackendMD *xferLoadedMd_;
+    std::string srcAgentName_;
+    std::string dstAgentName_;
+    int srcDevId_;
+    int dstDevId_;
 
     nixl_status_t
     registerMems() {
@@ -124,22 +120,22 @@ private:
         nixl_status_t ret;
         nixlBackendMD *md;
 
-        for (int i = 0; i < num_bufs_; i++) {
-            src_mem_[i]->populateBlobDesc(&src_desc, i);
-            ret = src_backend_engine_->registerMem(src_desc, srcMemType, md);
+        for (size_t i = 0; i < srcMem_.size(); i++) {
+            srcMem_[i]->populateBlobDesc(&src_desc, i);
+            ret = srcBackendEngine_->registerMem(src_desc, srcMemType, md);
             if (ret != NIXL_SUCCESS) {
                 NIXL_ERROR << "Failed to register src memory: " << ret;
                 return ret;
             }
-            src_mem_[i]->setMD(md);
+            srcMem_[i]->setMD(md);
 
-            dst_mem_[i]->populateBlobDesc(&dst_desc, i);
-            ret = dst_backend_engine_->registerMem(dst_desc, dstMemType, md);
+            dstMem_[i]->populateBlobDesc(&dst_desc, i);
+            ret = dstBackendEngine_->registerMem(dst_desc, dstMemType, md);
             if (ret != NIXL_SUCCESS) {
                 NIXL_ERROR << "Failed to register dst memory: " << ret;
                 return ret;
             }
-            dst_mem_[i]->setMD(md);
+            dstMem_[i]->setMD(md);
         }
         return NIXL_SUCCESS;
     }
@@ -147,13 +143,13 @@ private:
     nixl_status_t
     deregisterMems() {
         nixl_status_t ret;
-        for (int i = 0; i < num_bufs_; i++) {
-            ret = src_backend_engine_->deregisterMem(src_mem_[i]->getMD());
+        for (const auto &mem : srcMem_) {
+            ret = srcBackendEngine_->deregisterMem(mem->getMD());
             if (ret != NIXL_SUCCESS) {
                 NIXL_ERROR << "Failed to deregister src memory: " << ret;
                 return ret;
             }
-            ret = dst_backend_engine_->deregisterMem(dst_mem_[i]->getMD());
+            ret = dstBackendEngine_->deregisterMem(mem->getMD());
             if (ret != NIXL_SUCCESS) {
                 NIXL_ERROR << "Failed to deregister dst memory: " << ret;
                 return ret;
@@ -168,8 +164,8 @@ private:
 
         if (remote_xfer) {
             nixlBlobDesc info;
-            dst_mem_[0]->populateBlobDesc(&info);
-            ret = src_backend_engine_->getPublicData(dst_mem_[0]->getMD(), info.metaInfo);
+            dstMem_[0]->populateBlobDesc(&info);
+            ret = srcBackendEngine_->getPublicData(dstMem_[0]->getMD(), info.metaInfo);
             if (ret != NIXL_SUCCESS) {
                 NIXL_ERROR << "Failed to get meta info";
                 return ret;
@@ -179,27 +175,27 @@ private:
                 return ret;
             }
 
-            ret = src_backend_engine_->loadRemoteMD(info, dstMemType, dst_agent_name_, xfer_loaded_md_);
+            ret = srcBackendEngine_->loadRemoteMD(info, dstMemType, dstAgentName_, xferLoadedMd_);
         } else {
-            ret = src_backend_engine_->loadLocalMD(dst_mem_[0]->getMD(), xfer_loaded_md_);
+            ret = srcBackendEngine_->loadLocalMD(dstMem_[0]->getMD(), xferLoadedMd_);
         }
         if (ret != NIXL_SUCCESS) {
-            NIXL_ERROR << "Failed to load MD from " << dst_agent_name_;
+            NIXL_ERROR << "Failed to load MD from " << dstAgentName_;
             return ret;
         }
 
-        src_descs_ = std::make_unique<nixl_meta_dlist_t>(srcMemType);
-        dst_descs_ = std::make_unique<nixl_meta_dlist_t>(dstMemType);
+        srcDescs_ = std::make_unique<nixl_meta_dlist_t>(srcMemType);
+        dstDescs_ = std::make_unique<nixl_meta_dlist_t>(dstMemType);
 
         int num_entries = split_buf ? NUM_ENTRIES : 1;
         int entry_size = split_buf ? ENTRY_SIZE : BUF_SIZE;
-        for (int i = 0; i < num_bufs_; i++) {
-            for (int j = 0; j < num_entries; j++) {
+        for (size_t i = 0; i < srcMem_.size(); i++) {
+            for (int entry_i = 0; entry_i < num_entries; entry_i++) {
                 nixlMetaDesc desc;
-                src_mem_[i]->populateMetaDesc(&desc, j, entry_size);
-                src_descs_->addDesc(desc);
-                dst_mem_[i]->populateMetaDesc(&desc, j, entry_size);
-                dst_descs_->addDesc(desc);
+                srcMem_[i]->populateMetaDesc(&desc, entry_i, entry_size);
+                srcDescs_->addDesc(desc);
+                dstMem_[i]->populateMetaDesc(&desc, entry_i, entry_size);
+                dstDescs_->addDesc(desc);
             }
         }
 
@@ -211,15 +207,15 @@ private:
         nixlBackendReqH *handle;
         nixl_status_t ret;
 
-        ret = src_backend_engine_->prepXfer(
-            op, *src_descs_, *dst_descs_, dst_agent_name_, handle, &xfer_opt_args_);
+        ret = srcBackendEngine_->prepXfer(
+            op, *srcDescs_, *dstDescs_, dstAgentName_, handle, &xferOptArgs_);
         if (ret != NIXL_SUCCESS) {
             NIXL_ERROR << "Failed to prepare transfer";
             return ret;
         }
 
-        ret = src_backend_engine_->postXfer(
-            op, *src_descs_, *dst_descs_, dst_agent_name_, handle, &xfer_opt_args_);
+        ret = srcBackendEngine_->postXfer(
+            op, *srcDescs_, *dstDescs_, dstAgentName_, handle, &xferOptArgs_);
         if (ret != NIXL_SUCCESS && ret != NIXL_IN_PROG) {
             NIXL_ERROR << "Failed to post transfer";
             return ret;
@@ -230,20 +226,20 @@ private:
         NIXL_INFO << "\t\tWaiting for transfer to complete...";
 
         while (ret == NIXL_IN_PROG && absl::Now() < end_time) {
-            ret = src_backend_engine_->checkXfer(handle);
+            ret = srcBackendEngine_->checkXfer(handle);
             if (ret != NIXL_SUCCESS && ret != NIXL_IN_PROG) {
                 NIXL_ERROR << "Transfer check failed";
                 return ret;
             }
 
-            if (dst_backend_engine_->supportsProgTh()) {
-                dst_backend_engine_->progress();
+            if (dstBackendEngine_->supportsProgTh()) {
+                dstBackendEngine_->progress();
             }
         }
 
         NIXL_INFO << "\nTransfer complete";
 
-        ret = src_backend_engine_->releaseReqH(handle);
+        ret = srcBackendEngine_->releaseReqH(handle);
         if (ret != NIXL_SUCCESS) {
             NIXL_ERROR << "Failed to release transfer handle";
             return ret;
@@ -254,14 +250,14 @@ private:
 
     nixl_status_t
     verifyTransfer(nixl_xfer_op_t op) {
-        if (src_backend_engine_->supportsNotif()) {
-            if (!verifyNotifs(xfer_opt_args_.notifMsg)) {
+        if (srcBackendEngine_->supportsNotif()) {
+            if (!verifyNotifs(xferOptArgs_.notifMsg)) {
                 NIXL_ERROR << "Failed in notifications verification";
                 return NIXL_ERR_BACKEND;
             }
 
-            xfer_opt_args_.notifMsg = "";
-            xfer_opt_args_.hasNotif = false;
+            xferOptArgs_.notifMsg = "";
+            xferOptArgs_.hasNotif = false;
         }
 
         return NIXL_SUCCESS;
@@ -278,14 +274,14 @@ private:
         auto end_time = absl::Now() + absl::Seconds(3);
 
         while (num_notifs == 0 && absl::Now() < end_time) {
-            ret = dst_backend_engine_->getNotifs(target_notifs);
+            ret = dstBackendEngine_->getNotifs(target_notifs);
             if (ret != NIXL_SUCCESS) {
                 NIXL_ERROR << "Failed to get notifications";
                 return ret;
             }
             num_notifs = target_notifs.size();
-            if (src_backend_engine_->supportsProgTh()) {
-                src_backend_engine_->progress();
+            if (srcBackendEngine_->supportsProgTh()) {
+                srcBackendEngine_->progress();
             }
         }
 
@@ -296,28 +292,28 @@ private:
             return NIXL_ERR_BACKEND;
         }
 
-        if (target_notifs.front().first != src_agent_name_) {
-            NIXL_ERROR << "Expected notification from " << src_agent_name_ << ", got "
-                    << target_notifs.front().first;
+        if (target_notifs.front().first != srcAgentName_) {
+            NIXL_ERROR << "Expected notification from " << srcAgentName_ << ", got "
+                       << target_notifs.front().first;
             return NIXL_ERR_BACKEND;
         }
         if (target_notifs.front().second != msg) {
             NIXL_ERROR << "Expected notification message " << msg << ", got "
-                    << target_notifs.front().second;
+                       << target_notifs.front().second;
             return NIXL_ERR_BACKEND;
         }
 
         NIXL_INFO << "OK\n"
-                << "message: " << target_notifs.front().second << " from "
-                << target_notifs.front().first;
+                  << "message: " << target_notifs.front().second << " from "
+                  << target_notifs.front().first;
 
         return NIXL_SUCCESS;
     }
 
     void
     setupNotifs(std::string msg) {
-        xfer_opt_args_.notifMsg = msg;
-        xfer_opt_args_.hasNotif = true;
+        xferOptArgs_.notifMsg = msg;
+        xferOptArgs_.hasNotif = true;
     }
 
     nixl_status_t
@@ -325,19 +321,19 @@ private:
         std::string conn_info;
         nixl_status_t ret;
 
-        ret = src_backend_engine_->getConnInfo(conn_info);
+        ret = srcBackendEngine_->getConnInfo(conn_info);
         if (ret != NIXL_SUCCESS) {
             NIXL_ERROR << "Failed to get connection info";
             return ret;
         }
 
-        ret = dst_backend_engine_->getConnInfo(conn_info);
+        ret = dstBackendEngine_->getConnInfo(conn_info);
         if (ret != NIXL_SUCCESS) {
             NIXL_ERROR << "Failed to get remote connection info";
             return ret;
         }
 
-        ret = src_backend_engine_->loadRemoteConnInfo(dst_agent_name_, conn_info);
+        ret = srcBackendEngine_->loadRemoteConnInfo(dstAgentName_, conn_info);
         if (ret != NIXL_SUCCESS) {
             NIXL_ERROR << "Failed to load remote connection info";
             return ret;
