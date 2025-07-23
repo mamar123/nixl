@@ -76,4 +76,3 @@ jobs:
         run: |
           # Delete S3 bucket
           aws s3 rb s3://${AWS_DEFAULT_BUCKET} --force
-          
