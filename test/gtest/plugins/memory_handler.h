@@ -27,7 +27,7 @@ template<nixl_mem_t memType> class memoryHandler;
 
 template<> class memoryHandler<DRAM_SEG> {
 public:
-    memoryHandler(size_t len, int dev_id) : buf_(len), len_(len), devId_(dev_id) {}
+    memoryHandler(size_t len, int dev_id) : buf_(len), len_(len), devId_(dev_id), md_(nullptr) {}
 
     ~memoryHandler() = default;
 
@@ -89,7 +89,7 @@ private:
 
 template<> class memoryHandler<OBJ_SEG> {
 public:
-    memoryHandler(size_t len, int dev_id) : len_(len), devId_(dev_id) {}
+    memoryHandler(size_t len, int dev_id) : len_(len), devId_(dev_id), md_(nullptr) {}
 
     ~memoryHandler() = default;
 
