@@ -23,6 +23,8 @@
 #include "common/nixl_log.h"
 #include "nixl.h"
 
+namespace gtest::plugins {
+
 template<nixl_mem_t memType> class memoryHandler;
 
 template<> class memoryHandler<DRAM_SEG> {
@@ -125,4 +127,5 @@ private:
     nixlBackendMD *md_;
 };
 
+} // namespace gtest::plugins
 #endif // __MEMORY_HANDLER_H

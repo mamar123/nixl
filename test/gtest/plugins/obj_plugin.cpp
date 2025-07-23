@@ -21,7 +21,7 @@
 #include "transfer_handler.h"
 #include "obj/obj_backend.h"
 
-namespace gtest::obj_plugin {
+namespace gtest::plugins::obj {
 /**
  * @note To run OBJ plugin tests, the following environment variables must be set:
  *       - AWS_ACCESS_KEY_ID
@@ -41,7 +41,7 @@ const nixlBackendInitParams obj_test_params = {.localAgent = "Agent1",
                                                .pthrDelay = 0,
                                                .syncMode = nixl_thread_sync_t::NIXL_THREAD_SYNC_RW};
 
-class setupObjTestFixture : public plugins_common::setupBackendTestFixture {
+class setupObjTestFixture : public setupBackendTestFixture {
 protected:
     setupObjTestFixture() {
         localBackendEngine_ = std::make_shared<nixlObjEngine>(&GetParam());
@@ -68,4 +68,4 @@ TEST_P(setupObjTestFixture, XferMultiBufsTest) {
 
 INSTANTIATE_TEST_SUITE_P(ObjTests, setupObjTestFixture, testing::Values(obj_test_params));
 
-} // namespace gtest::obj_plugin
+} // namespace gtest::plugins::obj

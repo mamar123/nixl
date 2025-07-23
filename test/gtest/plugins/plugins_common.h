@@ -21,7 +21,7 @@
 #include <absl/log/check.h>
 #include "backend_engine.h"
 
-namespace plugins_common {
+namespace gtest::plugins {
 /*
  * Base class for all plugin tests.
  */
@@ -41,5 +41,5 @@ protected:
     }
 };
 
-} // namespace plugins_common
+} // namespace gtest::plugins
 #endif // __PLUGIN_TEST_H

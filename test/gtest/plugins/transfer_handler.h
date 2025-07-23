@@ -24,6 +24,8 @@
 #include "gtest/gtest.h"
 #include "memory_handler.h"
 
+namespace gtest::plugins {
+
 template<nixl_mem_t srcMemType, nixl_mem_t dstMemType> class transferHandler {
 public:
     transferHandler(std::shared_ptr<nixlBackendEngine> src_engine,
@@ -253,4 +255,5 @@ private:
     }
 };
 
+} // namespace gtest::plugins
 #endif // __TRANSFER_HANDLER_H
