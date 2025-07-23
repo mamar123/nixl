@@ -30,23 +30,23 @@ template<nixl_mem_t srcMemType, nixl_mem_t dstMemType> class transferHandler {
 public:
     transferHandler(std::shared_ptr<nixlBackendEngine> src_engine,
                     std::shared_ptr<nixlBackendEngine> dst_engine,
+                    std::string src_agent_name,
+                    std::string dst_agent_name,
                     bool split_buf,
                     int num_bufs)
         : srcBackendEngine_(src_engine),
-          srcAgentName_(LOCAL_AGENT_NAME),
+          dstBackendEngine_(dst_engine),
+          srcAgentName_(src_agent_name),
+          dstAgentName_(dst_agent_name),
           srcDevId_(0) {
 
-        bool remote_xfer = src_engine != dst_engine;
+        bool remote_xfer = srcAgentName_ != dstAgentName_;
         if (remote_xfer) {
             CHECK(src_engine->supportsRemote()) << "Local engine does not support remote transfers";
-            dstBackendEngine_ = dst_engine;
-            dstAgentName_ = REMOTE_AGENT_NAME;
             dstDevId_ = 1;
             verifyConnInfo();
         } else {
             CHECK(src_engine->supportsLocal()) << "Local engine does not support local transfers";
-            dstBackendEngine_ = src_engine;
-            dstAgentName_ = LOCAL_AGENT_NAME;
             dstDevId_ = srcDevId_;
         }
 
@@ -99,8 +99,6 @@ private:
     static constexpr size_t NUM_ENTRIES = 4;
     static constexpr size_t ENTRY_SIZE = 16;
     static constexpr size_t BUF_SIZE = NUM_ENTRIES * ENTRY_SIZE;
-    static constexpr std::string_view LOCAL_AGENT_NAME = "Agent1";
-    static constexpr std::string_view REMOTE_AGENT_NAME = "Agent2";
 
     std::vector<std::unique_ptr<memoryHandler<srcMemType>>> srcMem_;
     std::vector<std::unique_ptr<memoryHandler<dstMemType>>> dstMem_;

@@ -34,7 +34,8 @@ namespace gtest::plugins::obj {
  */
 
 nixl_b_params_t obj_params;
-const nixlBackendInitParams obj_test_params = {.localAgent = "Agent1",
+const std::string local_agent_name = "Agent1";
+const nixlBackendInitParams obj_test_params = {.localAgent = local_agent_name,
                                                .type = "OBJ",
                                                .customParams = &obj_params,
                                                .enableProgTh = false,
@@ -49,7 +50,8 @@ protected:
 };
 
 TEST_P(setupObjTestFixture, XferTest) {
-    transferHandler<DRAM_SEG, OBJ_SEG> transfer(localBackendEngine_, localBackendEngine_, false, 1);
+    transferHandler<DRAM_SEG, OBJ_SEG> transfer(
+        localBackendEngine_, localBackendEngine_, local_agent_name, local_agent_name, false, 1);
     transfer.setLocalMem();
     transfer.testTransfer(NIXL_WRITE);
     transfer.resetLocalMem();
@@ -58,7 +60,8 @@ TEST_P(setupObjTestFixture, XferTest) {
 }
 
 TEST_P(setupObjTestFixture, XferMultiBufsTest) {
-    transferHandler<DRAM_SEG, OBJ_SEG> transfer(localBackendEngine_, localBackendEngine_, false, 3);
+    transferHandler<DRAM_SEG, OBJ_SEG> transfer(
+        localBackendEngine_, localBackendEngine_, local_agent_name, local_agent_name, false, 3);
     transfer.setLocalMem();
     transfer.testTransfer(NIXL_WRITE);
     transfer.resetLocalMem();
