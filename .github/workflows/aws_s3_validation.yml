@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: eu-central-1
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.NIXL_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.NIXL_AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_BUCKET: nixl-ci-test-${{ github.run_id }}
       NIXL_INSTALL_DIR: /opt/nixl
     strategy:
