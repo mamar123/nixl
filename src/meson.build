@@ -36,3 +36,8 @@ nixl_test_utils_dep = declare_dependency(
 )
 
 subdir('bindings')
+
+# Torch integration (optional)
+if get_option('build_torch_integration')
+    subdir('torch-integration')
+endif

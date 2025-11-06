@@ -55,6 +55,6 @@ if gusli_lib_found.found()
     subdir('gusli')
 endif
 
-if cuda_dep.found() and doca_gpunetio_dep.found()
-    subdir('gpunetio')
-endif
+#if cuda_dep.found() and doca_gpunetio_dep.found()
+#    subdir('gpunetio')
+#endif

@@ -921,6 +921,7 @@ nixlAgent::createXferReq(const nixl_xfer_op_t &operation,
         ret2 = data->remoteSections[remote_agent]->populate(
                      remote_descs, backend, *handle->targetDescs);
 
+        NIXL_ERROR_FUNC << "populate local_descs ret1=" << ret1 << ", ret2=" << ret2 << ", backend=" << backend->getType();
         if ((ret1 == NIXL_SUCCESS) && (ret2 == NIXL_SUCCESS)) {
             NIXL_INFO << "Selected backend: " << backend->getType();
             handle->engine = backend;

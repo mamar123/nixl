@@ -23,6 +23,7 @@
 #include "backend/backend_engine.h"
 #include "nixl_types.h"
 #include "serdes/serdes.h"
+#include "common/nixl_log.h"
 
 /*** Class nixlMemSection implementation ***/
 
@@ -40,11 +41,13 @@ nixl_status_t nixlMemSection::populate (const nixl_xfer_dlist_t &query,
                                         nixlBackendEngine* backend,
                                         nixl_meta_dlist_t &resp) const {
 
+    NIXL_ERROR_FUNC << "12: populate query.getType()=" << query.getType() << ", resp.getType()=" << resp.getType() << ", query.descCount()=" << query.descCount();
     if ((query.getType() != resp.getType()) || (query.descCount() == 0))
         return NIXL_ERR_INVALID_PARAM;
 
     section_key_t sec_key = std::make_pair(query.getType(), backend);
     auto it = sectionMap.find(sec_key);
+    NIXL_ERROR_FUNC << "13: sectionMap.find(sec_key) found=" << (it != sectionMap.end());
     if (it==sectionMap.end())
         return NIXL_ERR_NOT_FOUND;
 
@@ -58,6 +61,7 @@ nixl_status_t nixlMemSection::populate (const nixl_xfer_dlist_t &query,
     s_index = base->getCoveringIndex(query[0]);
     if (s_index < 0) {
         resp.clear();
+        NIXL_ERROR_FUNC << "11: getCoveringIndex failed for query[0], backend=" << backend->getType();
         return NIXL_ERR_UNKNOWN;
     }
     static_cast<nixlBasicDesc &>(resp[0]) = query[0];
@@ -70,6 +74,7 @@ nixl_status_t nixlMemSection::populate (const nixl_xfer_dlist_t &query,
             s_index = base->getCoveringIndex(query[i]);
             if (s_index < 0) {
                 resp.clear();
+                NIXL_ERROR_FUNC << "14: getCoveringIndex failed for query[" << i << "], backend=" << backend->getType();
                 return NIXL_ERR_UNKNOWN;
             }
         } else {
@@ -77,6 +82,7 @@ nixl_status_t nixlMemSection::populate (const nixl_xfer_dlist_t &query,
                 ++s_index;
             if (s_index == size) {
                 resp.clear();
+                NIXL_ERROR_FUNC << "15: getCoveringIndex failed for query[" << i << "], backend=" << backend->getType();
                 return NIXL_ERR_UNKNOWN;
             }
         }
