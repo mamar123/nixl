@@ -277,50 +277,33 @@ void NixlWorker::startWorker() {
                     
                     printf("NIXL: @@@@@@@@@@@@@@@@@@@@@@@@@@@> 40: in rank %d, copying broadcast buffer to all peers\n", group->rank);
                     for (int j = 0; j < group->size; ++j) {
-                        if (j != group->rank || true) {
-                            // printf("NIXL: @@@@@@@@@@@@@@@@@@@@@@@@@@@> 41: in rank %d, before copying to peer %d, buffer values: [", group->rank, j);
-                            // for (int k = 0; k < 30; ++k) {
-                            //     printf("%u ", ((uint8_t*)group->peerInfos[j].broadcastBufferPtr)[k]);
-                            // }
-                            // printf("]\n");
+                        size_t buffer_size = task.tensorSize;
+                        nixl_xfer_dlist_t src_dlist(DRAM_SEG);
+                        src_dlist.addDesc(nixlBlobDesc(reinterpret_cast<uintptr_t>(group->sendBuffer), buffer_size, 0, ""));
+                        nixl_xfer_dlist_t dst_dlist(DRAM_SEG);
+                        dst_dlist.addDesc(nixlBlobDesc(reinterpret_cast<uintptr_t>(group->peerInfos[j].recvBufferPtr), buffer_size, 0, ""));
 
-                            // memcpy(group->peerInfos[j].broadcastBufferPtr, group->broadcastBuffer, 128 * sizeof(uint8_t));
+                        std::string dst_name = "nixl_torch_agent_" + std::to_string(j);
+                        nixlXferReqH* req_handle = nullptr;
+                        nixl_opt_args_t extra_params;
+                        nixl_status_t status;
+                        extra_params.backends.push_back(group->backend);
+                        extra_params.notifMsg = "nixl_torch_transfer_request";
+                        extra_params.hasNotif = true;
 
-                            // printf("NIXL: @@@@@@@@@@@@@@@@@@@@@@@@@@@> 42: in rank %d, after copying to peer %d, buffer values: [", group->rank, j);
-                            // for (int k = 0; k < 30; ++k) {
-                            //     printf("%u ", ((uint8_t*)group->peerInfos[j].broadcastBufferPtr)[k]);
-                            // }
-                            // printf("]\n");
+                        printf("NIXL: @@@@@@@@@@@@@@@@@@@@@@@@@@@> 41: in rank %d, creating transfer request to rank %d\n", group->rank, j);
+                        status = group->agent->createXferReq(NIXL_WRITE, src_dlist, dst_dlist, dst_name, req_handle, &extra_params);
+                        TORCH_CHECK(status == NIXL_SUCCESS, "Failed to create transfer request");
+                        status = group->agent->postXferReq(req_handle);
+                        TORCH_CHECK(status == NIXL_SUCCESS || status == NIXL_IN_PROG, "Failed to post transfer request");
 
-                            size_t buffer_size = task.tensorSize;
-                            nixl_xfer_dlist_t src_dlist(DRAM_SEG);
-                            src_dlist.addDesc(nixlBlobDesc(reinterpret_cast<uintptr_t>(group->sendBuffer), buffer_size, 0, ""));
-                            nixl_xfer_dlist_t dst_dlist(DRAM_SEG);
-                            dst_dlist.addDesc(nixlBlobDesc(reinterpret_cast<uintptr_t>(group->peerInfos[j].recvBufferPtr), buffer_size, 0, ""));
-
-                            std::string dst_name = "nixl_torch_agent_" + std::to_string(j);
-                            nixlXferReqH* req_handle = nullptr;
-                            nixl_opt_args_t extra_params;
-                            nixl_status_t status;
-                            extra_params.backends.push_back(group->backend);
-                            extra_params.notifMsg = "nixl_torch_transfer_request";
-                            extra_params.hasNotif = true;
-
-                            printf("NIXL: @@@@@@@@@@@@@@@@@@@@@@@@@@@> 41: in rank %d, creating transfer request to rank %d\n", group->rank, j);
-                            status = group->agent->createXferReq(NIXL_WRITE, src_dlist, dst_dlist, dst_name, req_handle, &extra_params);
-                            TORCH_CHECK(status == NIXL_SUCCESS, "Failed to create transfer request");
-                            status = group->agent->postXferReq(req_handle);
-                            TORCH_CHECK(status == NIXL_SUCCESS || status == NIXL_IN_PROG, "Failed to post transfer request");
-
-                            int attempts = 1000;
-                            do {
-                                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                                status = group->agent->getXferStatus(req_handle);
-                                TORCH_CHECK(status == NIXL_SUCCESS || status == NIXL_IN_PROG, "Failed to get transfer status");
-                            } while (status != NIXL_SUCCESS && attempts-- > 0);
-                            TORCH_CHECK(attempts > 0, "Transfer status not successful");
-                        }
-                        // __atomic_store_n(group->peerInfos[j].signalPtr, 1, __ATOMIC_RELEASE);
+                        int attempts = 1000;
+                        do {
+                            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                            status = group->agent->getXferStatus(req_handle);
+                            TORCH_CHECK(status == NIXL_SUCCESS || status == NIXL_IN_PROG, "Failed to get transfer status");
+                        } while (status != NIXL_SUCCESS && attempts-- > 0);
+                        TORCH_CHECK(attempts > 0, "Transfer status not successful");
                     }
                     printf("NIXL: @@@@@@@@@@@@@@@@@@@@@@@@@@@> 43: in rank %d, copied broadcast buffer to all peers\n", group->rank);
 
@@ -328,55 +311,6 @@ void NixlWorker::startWorker() {
                     
                 } else if (task_status[i].load(std::memory_order_acquire) ==
                            TRANSFERRED) {
-                    // std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                    // Check if transfer is complete
-                    // For now, immediately mark as done
-                    // A real implementation would check nixl transfer status here
-                    
-                    // for (int j = 0; j < group->size; ++j) {
-                    //     group->activeRanksTensor[j] = group->activeRanks[j] ? 1 : 0;
-                    // }
-
-                    // if (__atomic_load_n(&group->signal, __ATOMIC_ACQUIRE) == 1) {
-                    //     printf("NIXL: @@@@@@@@@@@@@@@@@@@@@@@@@@@> 44: in rank %d, signal=1\n", group->rank);
-                    //     task_status[i].store(DONE, std::memory_order_release);
-                    //     task.active = false;
-                    //     if (hasCallback_[i]) {
-                    //         callbacks_[i]();
-                    //     }
-                    // }
-
-                    // if (!skipTransfer) {
-                    //     task_status[i].store(DONE, std::memory_order_release);
-                    //     task.active = false;
-                    //     if (hasCallback_[i]) {
-                    //         callbacks_[i]();
-                    //     }
-                    // }
-
-                    // nixl_notifs_t notif_map;
-                    // int n_notifs = 0;
-                    // int attempts = 1000;
-                    // nixl_status_t status;
-                    // do {
-                    //     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    //     status = group->agent->getNotifs(notif_map);
-                    //     TORCH_CHECK(status == NIXL_SUCCESS, "Failed to get notifs");
-                    //     n_notifs = notif_map.size();
-                    // } while (n_notifs == 0 && attempts-- > 0);
-                    // TORCH_CHECK(attempts > 0, "No notifs received");
-
-                    // std::vector<std::string> notif_msgs = notif_map["nixl_torch_agent_" + std::to_string(0)];
-                    // auto it = std::find(notif_msgs.begin(), notif_msgs.end(), "broadcast_buffer_transfer_request");
-                    // if (it != notif_msgs.end()) {
-                    //     printf("NIXL: @@@@@@@@@@@@@@@@@@@@@@@@@@@> 45: in rank %d, broadcast buffer transfer request received\n", group->rank);
-                    //     task_status[i].store(DONE, std::memory_order_release);
-                    //     task.active = false;
-                    //     if (hasCallback_[i]) {
-                    //         callbacks_[i]();
-                    //     }
-                    // }
-
                     std::vector<bool> received(group->size, false);
                     int expectedNotifs = 0;
                     int receivedCount = 0;
